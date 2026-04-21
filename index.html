@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Auto H&R">
+<meta name="theme-color" content="#007AFF">
+<meta name="description" content="Gestión del taller Auto H&R · Gavà">
+<title>Auto H&R · Taller</title>
+
+<!-- PWA Manifest inline via JS blob -->
+<script>
+(function(){
+  const manifest = {
+    name: "Auto H&R Taller",
+    short_name: "Auto H&R",
+    description: "Gestión de facturas y gastos del taller",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#007AFF",
+    orientation: "portrait",
+    icons: [
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%23007AFF'/%3E%3Ctext x='96' y='130' text-anchor='middle' font-size='100' font-family='system-ui'%3E🔧%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%23007AFF'/%3E%3Ctext x='256' y='360' text-anchor='middle' font-size='280' font-family='system-ui'%3E🔧%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest'; link.href = url;
+  document.head.appendChild(link);
+})();
+</script>
+
+<!-- Apple Touch Icon inline -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23007AFF'/%3E%3Ctext x='90' y='125' text-anchor='middle' font-size='95' font-family='system-ui'%3E🔧%3C/text%3E%3C/svg%3E">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f7;color:#1d1d1f;overscroll-behavior:none}
+.app{max-width:430px;margin:0 auto;background:#fff;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid #e5e5ea;padding:52px 16px 10px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar .title{font-size:18px;font-weight:700;color:#1d1d1f}
+.topbar .sub{font-size:11px;color:#8e8e93}
+.badge{font-size:11px;background:#fff3cd;color:#856404;padding:3px 9px;border-radius:20px;border:1px solid #ffc107}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#34c759;display:inline-block;margin-left:6px;flex-shrink:0}
+.sync-dot.syncing{background:#ff9500;animation:pulse 1s infinite}
+.sync-dot.error{background:#ff3b30}
+.navbar{background:#fff;border-top:1px solid #e5e5ea;display:grid;grid-template-columns:repeat(6,1fr);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding-bottom:env(safe-area-inset-bottom,16px)}
+.nb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 10px;border:none;background:transparent;cursor:pointer;font-size:9px;color:#8e8e93;font-family:inherit}
+.nb.active{color:#007AFF}
+.ni{font-size:20px;line-height:1.1}
+.content{flex:1;overflow-y:auto;padding:12px 16px 110px}
+.sec{display:none}.sec.active{display:block}
+.lbl{font-size:11px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
+.card{background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:13px;margin-bottom:9px}
+.crow{display:flex;justify-content:space-between;align-items:flex-start}
+.ct{font-size:14px;font-weight:600;color:#1d1d1f}
+.cs{font-size:11px;color:#8e8e93;margin-top:2px}
+.chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px}
+.cg{background:#d1f2e8;color:#0a6640}.ca{background:#fff3cd;color:#856404}.cr{background:#fde8e8;color:#8b1a1a}.cb{background:#dbeafe;color:#1e40af}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.metric{background:#f5f5f7;border-radius:10px;padding:11px}
+.mv{font-size:18px;font-weight:700;color:#1d1d1f}
+.ml{font-size:10px;color:#8e8e93;margin-top:2px}
+.fg{margin-bottom:10px}
+.fl{font-size:12px;font-weight:500;color:#3c3c43;margin-bottom:4px;display:block}
+input,select,textarea{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d1d1d6;border-radius:10px;background:#fff;color:#1d1d1f;font-family:inherit;outline:none;-webkit-appearance:none;-webkit-text-size-adjust:100%}
+input:focus,select:focus,textarea:focus{border-color:#007AFF;box-shadow:0 0 0 3px rgba(0,122,255,.15)}
+textarea{resize:vertical;min-height:60px}
+.btn{width:100%;padding:13px;border-radius:12px;border:1px solid #d1d1d6;background:#fff;color:#1d1d1f;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:8px;font-family:inherit;-webkit-appearance:none}
+.bp{background:#007AFF;color:#fff;border-color:#007AFF;font-weight:600}
+.bs{background:#34c759;color:#fff;border-color:#34c759}
+.bsm{padding:7px 14px;font-size:12px;width:auto;margin:0;border-radius:8px}
+.lr{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f5}
+.lr:last-child{border-bottom:none}
+.an{font-size:14px;font-weight:700;color:#ff3b30}
+.au{font-size:14px;font-weight:600;color:#1d1d1f}
+.pb{background:#1a1a2e;color:#fff;font-size:11px;font-weight:700;border-radius:4px;padding:3px 7px;letter-spacing:1.5px;display:inline-block}
+.ftabs{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.tab{padding:6px 14px;border-radius:20px;border:1px solid #d1d1d6;background:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit;color:#3c3c43;-webkit-appearance:none}
+.tab.active{background:#007AFF;color:#fff;border-color:#007AFF}
+.ai-wrap{background:#f0f7ff;border:1px solid #bfdbfe;border-radius:14px;padding:13px;margin-bottom:12px}
+.ai-h{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.ai-dot{width:7px;height:7px;background:#007AFF;border-radius:50%;animation:pulse 1.5s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ai-t{font-size:13px;font-weight:600;color:#1e40af}
+.ai-r{display:flex;gap:7px}
+.ai-r input{flex:1;font-size:14px}
+.aisend{padding:10px 16px;border-radius:10px;border:none;background:#007AFF;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.ai-resp{margin-top:10px;font-size:13px;line-height:1.6;color:#1d1d1f;background:#fff;border-radius:10px;padding:11px;border:1px solid #e5e5ea;display:none;white-space:pre-wrap}
+.ai-resp.show{display:block}
+.ai-ld{display:none;align-items:center;gap:7px;margin-top:9px;font-size:12px;color:#8e8e93}
+.ai-ld.show{display:flex}
+.spin{width:14px;height:14px;border:2px solid #e5e5ea;border-top-color:#007AFF;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.psug{background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 12px;margin-top:5px;font-size:13px;cursor:pointer;display:none}
+.psug.show{display:block}
+.total-box{background:#f5f5f7;border-radius:10px;padding:11px;text-align:center;margin-bottom:11px}
+.total-num{font-size:26px;font-weight:700;color:#007AFF}
+.total-lbl{font-size:11px;color:#8e8e93;margin-top:2px}
+.toast-wrap{position:fixed;top:80px;left:0;right:0;display:flex;justify-content:center;z-index:999;pointer-events:none}
+.toast{background:#1d1d1f;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;text-align:center;max-width:300px}
+.toast.show{opacity:1}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.sheet{background:#fff;border-radius:20px 20px 0 0;padding:12px 16px 40px;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sh{width:36px;height:4px;background:#d1d1d6;border-radius:2px;margin:0 auto 14px}
+.stitle{font-size:17px;font-weight:700;margin-bottom:14px;color:#1d1d1f}
+.inv{background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:16px;font-size:12px}
+.sync-banner{background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:9px;font-size:12px;color:#856404}
+.sync-banner.ok{background:#d1f2e8;border-color:#34c759;color:#0a6640}
+.sync-banner.err{background:#fde8e8;border-color:#ff3b30;color:#8b1a1a}
+.user-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center}
+.user-modal.open{display:flex}
+.user-sheet{background:#fff;border-radius:20px;padding:24px 20px;width:calc(100% - 40px);max-width:380px}
+.user-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:6px}
+.user-sub{font-size:13px;color:#8e8e93;text-align:center;margin-bottom:20px}
+.user-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.user-btn{padding:16px 10px;border-radius:14px;border:2px solid #d1d1d6;background:#fff;cursor:pointer;text-align:center;font-family:inherit;-webkit-appearance:none}
+.user-btn.sel{border-color:#007AFF;background:#f0f7ff}
+.uname{font-size:15px;font-weight:700;color:#1d1d1f;margin-top:5px}
+.urole{font-size:11px;color:#8e8e93}
+/* IRPF */
+.irpf-hero{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);border-radius:16px;padding:20px;margin-bottom:14px;color:#fff}
+.irpf-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.irpf-big{font-size:32px;font-weight:700;color:#fff;margin-bottom:2px}
+.irpf-sub{font-size:11px;color:rgba(255,255,255,.6)}
+.irpf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.irpf-m{background:rgba(255,255,255,.1);border-radius:10px;padding:10px}
+.irpf-mv{font-size:16px;font-weight:700;color:#fff}
+.irpf-ml{font-size:10px;color:rgba(255,255,255,.6);margin-top:2px}
+.progress-bar{height:8px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden;margin-top:12px}
+.progress-fill{height:100%;border-radius:4px;transition:width .5s ease;background:linear-gradient(90deg,#34c759,#30d158)}
+.progress-fill.warn{background:linear-gradient(90deg,#ff9500,#ffcc00)}
+.progress-fill.danger{background:linear-gradient(90deg,#ff3b30,#ff6b6b)}
+.trim-card{background:#f5f5f7;border-radius:12px;padding:12px;margin-bottom:8px}
+.trim-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.trim-name{font-size:13px;font-weight:700;color:#1d1d1f}
+.trim-status{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;background:#fff3cd;color:#856404}
+.trim-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #e5e5ea}
+.trim-row:last-child{border-bottom:none;font-weight:700;font-size:13px;padding-top:6px;margin-top:3px}
+.irpf-info{background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:10px}
+.irpf-info-title{font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px}
+.irpf-info p{font-size:12px;color:#374151;line-height:1.6;margin-bottom:4px}
+.ded-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f5;font-size:13px}
+.ded-item:last-child{border-bottom:none}
+.ded-val{font-weight:600;color:#ff3b30}
+.divider{height:1px;background:#f0f0f5;margin:12px 0}
+/* Cuota editable */
+.cuota-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f5}
+.cuota-row:last-child{border-bottom:none}
+.cuota-label{font-size:13px;color:#1d1d1f}
+.cuota-sub{font-size:10px;color:#8e8e93;margin-top:1px}
+.cuota-input{width:90px;font-size:14px;padding:6px 10px;border:1px solid #d1d1d6;border-radius:8px;text-align:right}
+/* PWA install banner */
+.pwa-banner{background:linear-gradient(135deg,#007AFF,#0051d5);color:#fff;border-radius:12px;padding:14px;margin-bottom:12px;display:none}
+.pwa-banner.show{display:flex;align-items:center;gap:12px}
+.pwa-banner-text{flex:1;font-size:13px;line-height:1.5}
+.pwa-banner-text b{font-size:14px;display:block;margin-bottom:2px}
+.pwa-btn{background:#fff;color:#007AFF;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.new-badge{background:#ff3b30;color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="title">Auto H&R <span id="sync-indicator" class="sync-dot"></span></div>
+      <div class="sub" id="topbar-user">Sant Isidre 85 · Gavà</div>
+    </div>
+    <span class="badge" id="topbadge">—</span>
+  </div>
+  <div class="content">
+
+    <!-- INICIO -->
+    <div class="sec active" id="sec-inicio">
+      <div id="pwa-banner" class="pwa-banner">
+        <div style="font-size:28px">📲</div>
+        <div class="pwa-banner-text"><b>Instalar como app</b>Añade Auto H&R a tu pantalla de inicio para usarla sin navegador.</div>
+        <button class="pwa-btn" onclick="installPWA()">Instalar</button>
+      </div>
+      <div id="sync-banner" class="sync-banner" style="display:none">
+        <span id="sync-icon">⏳</span><span id="sync-msg">Sincronizando...</span>
+      </div>
+      <div class="lbl">Resumen 2026</div>
+      <div class="metrics" id="dash-m"></div>
+      <div class="ai-wrap">
+        <div class="ai-h"><span class="ai-dot"></span><span class="ai-t">Asistente IA del Taller</span></div>
+        <div class="ai-r"><input id="ai-q" type="text" placeholder="¿Cuánto debe Onus Express?" onkeydown="if(event.key==='Enter')askAI()"><button class="aisend" onclick="askAI()">↗</button></div>
+        <div class="ai-ld" id="ai-ld"><div class="spin"></div><span>Consultando...</span></div>
+        <div class="ai-resp" id="ai-resp"></div>
+      </div>
+      <div class="lbl">Últimas facturas <span id="new-count-badge" style="display:none" class="new-badge"></span></div>
+      <div id="dash-rec"></div>
+      <button class="btn bp" onclick="openFact()">+ Nueva factura</button>
+    </div>
+
+    <!-- FACTURAS -->
+    <div class="sec" id="sec-facturas">
+      <div class="ftabs">
+        <button class="tab active" onclick="fFilter('todas',this)">Todas</button>
+        <button class="tab" onclick="fFilter('pendiente',this)">Pendientes</button>
+        <button class="tab" onclick="fFilter('cobrada',this)">Cobradas</button>
+        <button class="tab" onclick="fFilter('ali',this)">Ali</button>
+        <button class="tab" onclick="fFilter('yusef',this)">Yusef</button>
+      </div>
+      <div id="fact-list"></div>
+      <button class="btn bp" onclick="openFact()">+ Nueva factura</button>
+    </div>
+
+    <!-- GASTOS -->
+    <div class="sec" id="sec-gastos">
+      <div class="lbl">Registrar gasto</div>
+      <div class="fg"><label class="fl">Concepto</label><input id="g-c" placeholder="Ej: Piezas Adbosch"></div>
+      <div class="fg"><label class="fl">Proveedor</label><select id="g-p"><option>Adbosch</option><option>Berner</option><option>Otro proveedor</option></select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <div class="fg"><label class="fl">Base (€)</label><input id="g-i" type="number" placeholder="0.00"></div>
+        <div class="fg"><label class="fl">IVA %</label><select id="g-v"><option value="21">21%</option><option value="10">10%</option><option value="0">0%</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">Categoría</label><select id="g-k"><option>Piezas y recambios</option><option>Herramientas</option><option>Alquiler local</option><option>Suministros</option><option>Seguros</option><option>Gestoría / Asesoría</option><option>Otros</option></select></div>
+      <div class="fg"><label class="fl">Fecha</label><input id="g-f" type="date"></div>
+      <button class="btn bp" onclick="addGasto()">Guardar gasto</button>
+      <div class="lbl">Gastos registrados (compartidos)</div>
+      <div id="gasto-list"></div>
+    </div>
+
+    <!-- COBROS -->
+    <div class="sec" id="sec-cobros">
+      <div class="lbl">Cobros pendientes</div>
+      <div id="cobros-list"></div>
+      <div class="lbl" style="margin-top:14px">Historial por matrícula</div>
+      <div id="veh-list"></div>
+    </div>
+
+    <!-- IRPF -->
+    <div class="sec" id="sec-irpf">
+      <div class="irpf-hero">
+        <div class="irpf-title">📋 Modelo 130 · IRPF 2026</div>
+        <div class="irpf-big" id="irpf-cuota">0,00 €</div>
+        <div class="irpf-sub">Cuota a ingresar estimada — T1 acumulado</div>
+        <div class="progress-bar"><div class="progress-fill" id="irpf-progress" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:rgba(255,255,255,.5)">
+          <span>Sobre ingresos cobrados</span><span id="irpf-progress-pct">0%</span>
+        </div>
+        <div class="irpf-grid">
+          <div class="irpf-m"><div class="irpf-mv" id="irpf-ing">—</div><div class="irpf-ml">Ingresos cobrados</div></div>
+          <div class="irpf-m"><div class="irpf-mv" id="irpf-gas">—</div><div class="irpf-ml">Gastos deducibles</div></div>
+          <div class="irpf-m"><div class="irpf-mv" id="irpf-rdo">—</div><div class="irpf-ml">Rendimiento neto</div></div>
+          <div class="irpf-m"><div class="irpf-mv">20%</div><div class="irpf-ml">Tipo retención</div></div>
+        </div>
+      </div>
+      <div class="irpf-info">
+        <div class="irpf-info-title">ℹ️ Regla clave: Pendiente = excluido</div>
+        <p>Las facturas <b>Pendientes</b> no cuentan como ingreso hasta que se cobran. Solo computan las marcadas como <b>Cobradas</b>.</p>
+      </div>
+      <div class="lbl">Trimestres 2026</div>
+      <div id="trim-list"></div>
+      <div class="lbl">Gastos deducibles T1 (detalle)</div>
+      <div class="card" id="ded-detalle"></div>
+      <div class="lbl">Calculadora manual</div>
+      <div class="card">
+        <div class="fg"><label class="fl">Ingresos cobrados del trimestre (€)</label><input id="calc-ing" type="number" placeholder="0.00" oninput="calcTrimManual()"></div>
+        <div class="fg"><label class="fl">Gastos deducibles del trimestre (€)</label><input id="calc-gas" type="number" placeholder="0.00" oninput="calcTrimManual()"></div>
+        <div class="fg"><label class="fl">Pagos anteriores (€)</label><input id="calc-ant" type="number" placeholder="0.00" oninput="calcTrimManual()"></div>
+        <div class="total-box"><div class="total-lbl">Cuota M130</div><div class="total-num" id="calc-result">0,00 €</div><div style="font-size:11px;color:#8e8e93;margin-top:4px" id="calc-detail"></div></div>
+        <div class="irpf-info" style="margin-bottom:0">
+          <div class="irpf-info-title">📅 Plazos 2026</div>
+          <p>• <b>1T:</b> 20 abril &nbsp;• <b>2T:</b> 20 julio &nbsp;• <b>3T:</b> 20 oct &nbsp;• <b>4T:</b> 30 enero 2027</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- AJUSTES -->
+    <div class="sec" id="sec-ajustes">
+      <div class="lbl">Usuario activo</div>
+      <div class="card">
+        <div style="font-size:13px;color:#555;margin-bottom:10px">Sesión actual: <b id="cfg-user-display">—</b></div>
+        <button class="btn" onclick="openUserModal()">Cambiar usuario</button>
+      </div>
+
+      <div class="lbl">Instalar como app 📲</div>
+      <div class="card">
+        <div style="font-size:13px;color:#1d1d1f;margin-bottom:4px;font-weight:600">¿Cómo instalar Auto H&R?</div>
+        <div style="font-size:12px;color:#555;line-height:1.7;margin-bottom:10px">
+          <b>iPhone / iPad (Safari):</b><br>
+          1. Abre esta página en Safari<br>
+          2. Pulsa el botón compartir <b>⬆</b><br>
+          3. Selecciona <b>"Añadir a pantalla de inicio"</b><br>
+          4. Pulsa <b>Añadir</b><br><br>
+          <b>Android (Chrome):</b><br>
+          1. Pulsa el botón <b>⋮</b> (menú)<br>
+          2. Selecciona <b>"Añadir a pantalla de inicio"</b><br>
+          3. Confirma
+        </div>
+        <button class="btn bp" id="install-btn" style="display:none" onclick="installPWA()">📲 Instalar ahora</button>
+        <div id="install-ok" style="font-size:12px;color:#34c759;text-align:center;display:none;font-weight:600">✅ App ya instalada</div>
+      </div>
+
+      <div class="lbl">Sincronización ☁️</div>
+      <div class="card">
+        <div style="font-size:13px;color:#1d1d1f;margin-bottom:10px">Datos compartidos en tiempo real entre todos los usuarios del taller.</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #d1d1d6;border-radius:10px;font-size:14px;margin-bottom:10px">
+          <span id="sync-status-icon">🟢</span><span id="sync-status-text">Conectado</span>
+        </div>
+        <button class="btn bs" onclick="forcSync()">↻ Sincronizar ahora</button>
+        <div style="font-size:11px;color:#8e8e93;margin-top:4px;text-align:center" id="last-sync-time">—</div>
+      </div>
+
+      <div class="lbl">Usuarios con acceso</div>
+      <div class="card">
+        <div id="users-online-list" style="margin-bottom:12px"></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+          <input id="new-user-name" placeholder="Nombre del usuario" style="font-size:14px">
+          <button class="btn bp" style="margin:0;padding:10px 14px;font-size:13px;width:auto" onclick="addUser()">Añadir</button>
+        </div>
+      </div>
+
+      <div class="lbl">Gastos fijos mensuales</div>
+      <div class="card">
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:10px">Estos valores se sincronizan entre todos los usuarios. Edita directamente y guarda.</div>
+
+        <div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Taller</div>
+        <div class="fg"><label class="fl">Alquiler local (€/mes)</label><input id="cfg-alquiler" type="number" placeholder="800"></div>
+        <div class="fg"><label class="fl">Suministros / luz / agua (€/mes)</label><input id="cfg-sumi" type="number" placeholder="150"></div>
+        <div class="fg"><label class="fl">Gestoría / Asesoría (€/mes)</label><input id="cfg-gest" type="number" placeholder="100"></div>
+
+        <div class="divider"></div>
+        <div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Cuotas de autónomo — editables</div>
+        <div style="background:#f5f5f7;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <div class="cuota-row">
+            <div><div class="cuota-label">Ali</div><div class="cuota-sub">Cuota SS mensual real</div></div>
+            <div style="display:flex;align-items:center;gap:5px"><input class="cuota-input" id="cfg-cuota-ali" type="number" placeholder="0"><span style="font-size:12px;color:#555">€</span></div>
+          </div>
+          <div class="cuota-row">
+            <div><div class="cuota-label">Yusef</div><div class="cuota-sub">Cuota SS mensual real</div></div>
+            <div style="display:flex;align-items:center;gap:5px"><input class="cuota-input" id="cfg-cuota-yusef" type="number" placeholder="0"><span style="font-size:12px;color:#555">€</span></div>
+          </div>
+        </div>
+        <div class="irpf-info" style="margin-bottom:10px">
+          <div class="irpf-info-title">💡 ¿Cuánto pagas realmente?</div>
+          <p>Introduce la cuota real que cotiza cada uno. Si estás en tarifa plana, reducción por inicio de actividad u otro tramo, pon el importe exacto del recibo de la SS.</p>
+          <p>La cuota de autónomo es <b>gasto deducible</b> en IRPF (Modelo 130).</p>
+        </div>
+
+        <div class="divider"></div>
+        <div style="font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Préstamo taller</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+          <div class="fg"><label class="fl">Cuota mensual (€)</label><input id="cfg-prestamo" type="number" placeholder="0"></div>
+          <div class="fg"><label class="fl">Acreedor</label><input id="cfg-prestamo-nombre" type="text" placeholder="Banco / Familiar"></div>
+        </div>
+        <div class="irpf-info" style="margin-bottom:10px">
+          <div class="irpf-info-title">⚠️ Préstamos e IRPF</div>
+          <p>La cuota del préstamo <b>no es deducible</b> en su totalidad. Solo los <b>intereses</b> se pueden deducir. Consulta con Asemar o Zaballos el desglose capital/intereses.</p>
+        </div>
+
+        <button class="btn bp" onclick="saveCfgFiscal()">💾 Guardar y sincronizar</button>
+      </div>
+
+      <div class="lbl">Datos fiscales</div>
+      <div class="card">
+        <div class="fg"><label class="fl">Nombre</label><input id="cfg-nom" value="Ali Eduardo Rebolledo Lozada"></div>
+        <div class="fg"><label class="fl">NIF</label><input id="cfg-nif" value="56010757F"></div>
+        <div class="fg"><label class="fl">Dirección</label><input id="cfg-dir" value="Calle Sant Isidre 85, Esc Bajo, Local 2"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+          <div class="fg"><label class="fl">CP</label><input id="cfg-cp" value="08850"></div>
+          <div class="fg"><label class="fl">Ciudad</label><input id="cfg-ciudad" value="Gavà (Barcelona)"></div>
+        </div>
+        <div class="fg"><label class="fl">Teléfono</label><input id="cfg-tel" value="+34 930092059"></div>
+        <button class="btn bp" onclick="saveCfgLocal()">Guardar</button>
+      </div>
+
+      <div class="lbl">Numeración facturas</div>
+      <div class="card">
+        <div class="fg"><label class="fl">Próximo número</label><input id="cfg-num" value="056"></div>
+        <div class="fg"><label class="fl">Prefijo (opcional)</label><input id="cfg-pre" placeholder="Ej: AHR-"></div>
+        <button class="btn bp" onclick="saveCfgLocal()">Guardar</button>
+      </div>
+    </div>
+
+  </div>
+  <nav class="navbar">
+    <button class="nb active" onclick="goTo('inicio',this)"><span class="ni">⊞</span>Inicio</button>
+    <button class="nb" onclick="goTo('facturas',this)"><span class="ni">🧾</span>Facturas</button>
+    <button class="nb" onclick="goTo('gastos',this)"><span class="ni">💸</span>Gastos</button>
+    <button class="nb" onclick="goTo('cobros',this)"><span class="ni">⏳</span>Cobros</button>
+    <button class="nb" onclick="goTo('irpf',this)"><span class="ni">📋</span>IRPF</button>
+    <button class="nb" onclick="goTo('ajustes',this)"><span class="ni">⚙️</span>Ajustes</button>
+  </nav>
+</div>
+
+<div class="toast-wrap"><div class="toast" id="toast"></div></div>
+
+<!-- MODAL USUARIO -->
+<div class="user-modal open" id="user-modal">
+  <div class="user-sheet">
+    <div class="user-title">Auto H&R 🔧</div>
+    <div class="user-sub">¿Quién eres hoy?</div>
+    <div class="user-grid" id="user-grid"></div>
+    <div style="font-size:11px;color:#8e8e93;text-align:center">Datos sincronizados entre todos los usuarios</div>
+  </div>
+</div>
+
+<!-- MODAL FACTURA -->
+<div class="modal-bg" id="ov-fact">
+  <div class="sheet">
+    <div class="sh"></div>
+    <div class="stitle" id="fact-stitle">Nueva factura</div>
+    <div id="fact-form">
+      <div class="fg">
+        <label class="fl">Matrícula del vehículo</label>
+        <input id="f-mat" type="text" placeholder="Ej: 4175JFZ" autocomplete="off" oninput="onPlate(this)">
+        <div class="psug" id="psug" onclick="applyPlate()"></div>
+      </div>
+      <div id="plate-hist" style="display:none">
+        <div class="lbl">Historial vehículo</div>
+        <div id="plate-jobs"></div>
+      </div>
+      <div class="lbl" style="margin-top:10px">Datos del cliente</div>
+      <div class="fg"><label class="fl">Nombre / Empresa</label><input id="f-cli" placeholder="Nombre o empresa"></div>
+      <div class="fg"><label class="fl">NIF / CIF</label><input id="f-nif" placeholder="Ej: B12345678"></div>
+      <div class="fg"><label class="fl">Dirección</label><input id="f-dir" placeholder="Calle, número, ciudad"></div>
+      <div class="lbl">Trabajo realizado</div>
+      <div class="fg"><label class="fl">Concepto</label><textarea id="f-conc" placeholder="Descripción..."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <div class="fg"><label class="fl">Base (€)</label><input id="f-base" type="number" placeholder="0.00" oninput="calcT()"></div>
+        <div class="fg"><label class="fl">IVA %</label><select id="f-iva" onchange="calcT()"><option value="21">21%</option><option value="10">10%</option><option value="0">0%</option></select></div>
+      </div>
+      <div class="total-box"><div class="total-lbl">Total con IVA</div><div class="total-num" id="f-tot">0,00 €</div></div>
+      <div class="fg"><label class="fl">Estado</label><select id="f-est"><option value="pendiente">Pendiente</option><option value="cobrada">Cobrada</option></select></div>
+      <div class="fg"><label class="fl">Asignado a</label><select id="f-asig"><option>Ali</option><option>Yusef</option></select></div>
+      <button class="btn bp" onclick="showPreview()">Ver vista previa</button>
+      <button class="btn" onclick="closeFact()">Cancelar</button>
+    </div>
+    <div id="fact-prev" style="display:none">
+      <div class="lbl">Vista previa</div>
+      <div class="inv" id="inv-html"></div>
+      <div style="margin-top:14px">
+        <button class="btn bp" onclick="printFactura()">📄 Guardar / Imprimir PDF</button>
+        <button class="btn bs" onclick="addFactura()">✓ Guardar factura</button>
+        <button class="btn" onclick="backForm()">← Editar</button>
+        <button class="btn" onclick="closeFact()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======== PWA ========
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('pwa-banner').classList.add('show');
+  const ib = document.getElementById('install-btn');
+  if(ib) ib.style.display = 'block';
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('pwa-banner').classList.remove('show');
+  const ib = document.getElementById('install-btn');
+  if(ib) ib.style.display = 'none';
+  const ok = document.getElementById('install-ok');
+  if(ok) ok.style.display = 'block';
+  toast('App instalada correctamente ✅');
+});
+function installPWA() {
+  if(deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{deferredPrompt=null;}); }
+  else toast('En iPhone: Safari → botón compartir ⬆ → Añadir a pantalla de inicio');
+}
+// Service Worker inline
+if('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'autohr-v1';
+    self.addEventListener('install', e => { self.skipWaiting(); });
+    self.addEventListener('activate', e => { e.waitUntil(clients.claim()); });
+    self.addEventListener('fetch', e => {
+      if(e.request.method !== 'GET') return;
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request))));
+    });
+  `;
+  const blob = new Blob([swCode], {type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+
+// ======== HELPERS ========
+const fmt = n => n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+function chipC(e){const s=String(e).toLowerCase();return s==='cobrada'||s==='pagado'?'cg':s==='pendiente'?'ca':'cb';}
+function chipT(e){const s=String(e).toLowerCase();return s==='cobrada'||s==='pagado'?'Cobrada':'Pendiente';}
+function goTo(s,b){document.querySelectorAll('.sec').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nb').forEach(x=>x.classList.remove('active'));document.getElementById('sec-'+s).classList.add('active');b.classList.add('active');render();}
+function setSyncState(s){const dot=document.getElementById('sync-indicator'),ic=document.getElementById('sync-status-icon'),tx=document.getElementById('sync-status-text');dot.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');if(s==='ok'){ic.textContent='🟢';tx.textContent='Conectado · Datos en vivo';}else if(s==='syncing'){ic.textContent='🟡';tx.textContent='Sincronizando...';}else{ic.textContent='🔴';tx.textContent='Sin conexión';}}
+function showBanner(msg,type='info'){const b=document.getElementById('sync-banner');b.className='sync-banner'+(type==='ok'?' ok':type==='err'?' err':'');document.getElementById('sync-icon').textContent=type==='ok'?'✅':type==='err'?'❌':'⏳';document.getElementById('sync-msg').textContent=msg;b.style.display='flex';if(type==='ok')setTimeout(()=>b.style.display='none',2500);}
+function hideBanner(){document.getElementById('sync-banner').style.display='none';}
+
+// ======== DATOS BASE ========
+const vehiclesData=[
+  {plate:"1125GLX",client:"Onus Express",jobs:[{fecha:"2026-02-23",factura:"230226051",concepto:"Rodamientos, pastillas frenos del., cable selector, buje barra estabilizadora",base:630,total:762.3,estado:"pagado"}]},
+  {plate:"4175JFZ",client:"Onus Express",jobs:[{fecha:"2026-02-09",factura:"90226049",concepto:"Scanner / reemplazo turbo / limpieza filtro partículas",base:330.58,total:400,estado:"pagado"},{fecha:"2026-02-14",factura:"140226050",concepto:"Cambio aceite/filtro y filtro aire motor",base:123.97,total:150,estado:"pagado"}]},
+  {plate:"4432JSM",client:"Onus Express",jobs:[{fecha:"2026-01-30",factura:"300126046",concepto:"Reparación pedalera embrague",base:247.93,total:300,estado:"pagado"},{fecha:"2026-02-03",factura:"30226047",concepto:"Sustitución cerradura",base:66.12,total:80.01,estado:"pagado"}]},
+  {plate:"4611JFM",client:"Onus Express",jobs:[{fecha:"2026-03-11",factura:"110326052",concepto:"Cambio de caja de cambios",base:371.9,total:450,estado:"Pendiente"}]},
+  {plate:"6160FXZ",client:"Rosa Beltran",jobs:[{fecha:"2026-03-13",factura:"130326053",concepto:"Batería",base:90,total:108.9,estado:"pagado"}]},
+  {plate:"7384FYP",client:"Onus Express",jobs:[{fecha:"2026-02-03",factura:"30226048",concepto:"Cambio aceite/Filtro, pastillas frenos delanteros",base:232.23,total:281,estado:"pagado"},{fecha:"2026-03-27",factura:"270326054",concepto:"Reparación freno trasero, correa distribución",base:495.87,total:600,estado:"Pendiente"}]},
+  {plate:"9840KPD",client:"Onus Express",jobs:[{fecha:"2026-03-30",factura:"300326055",concepto:"Cambio de aceite y filtros + Reparación freno de mano",base:247.93,total:300,estado:"Pendiente"}]}
+];
+const vMap={};vehiclesData.forEach(v=>vMap[v.plate.toUpperCase()]=v);
+
+const cobrosBase=[
+  {fecha:"2026-02-09",factura:"90226049",cliente:"Onus Express",matricula:"4175JFZ",importe:330.58,dias:61,estado:"Pagado",notas:"Scanner/turbo"},
+  {fecha:"2026-02-14",factura:"140226050",cliente:"Onus Express",matricula:"4175JFZ",importe:123.97,dias:56,estado:"Pagado",notas:"Aceite/filtro"},
+  {fecha:"2026-02-23",factura:"230226051",cliente:"Onus Express",matricula:"1125GLX",importe:630,dias:47,estado:"Pagado",notas:"Rodamientos/pastillas"},
+  {fecha:"2026-03-11",factura:"110326052",cliente:"Onus Express",matricula:"4611JFM",importe:371.9,dias:31,estado:"Pendiente",notas:"Cambio de caja de cambios"},
+  {fecha:"2026-03-27",factura:"270326054",cliente:"Onus Express",matricula:"7384FYP",importe:495.87,dias:15,estado:"Pendiente",notas:"Freno trasero y correa distribución"},
+  {fecha:"2026-03-30",factura:"300326055",cliente:"Onus Express",matricula:"9840KPD",importe:247.93,dias:12,estado:"Pendiente",notas:"Freno de mano + aceite y filtro"}
+];
+const mesesData=[
+  {mes:"Enero",ingresos:2551.45,gf:1697.74,gv:1351.18},{mes:"Febrero",ingresos:2344.06,gf:1697.74,gv:2253.22},
+  {mes:"Marzo",ingresos:2602.4,gf:1697.74,gv:1478.82},{mes:"Octubre",ingresos:3968.07,gf:1697.74,gv:587},
+  {mes:"Noviembre",ingresos:3584.82,gf:1697.74,gv:1848.93},{mes:"Diciembre",ingresos:3739.88,gf:1697.74,gv:3151.53}
+];
+
+// ======== CLOUD STATE ========
+const STORAGE_KEY = 'autohr-shared-v4';
+let activeUser = null;
+let lastSyncAt = null;
+let sharedData = {
+  facturas:[],gastos:[],cobrosEstados:{},numNext:56,
+  lastUpdatedBy:null,lastUpdatedAt:null,
+  gastosFijos:{alquiler:800,sumi:150,gest:100,cuotaAli:0,cuotaYusef:0,prestamo:0,prestamoNombre:''},
+  usuarios:['Ali','Yusef'],usuariosActivity:{}
+};
+
+async function cloudLoad(){
+  setSyncState('syncing');
+  showBanner('Sincronizando...');
+  try{
+    const r=await window.storage.get(STORAGE_KEY,true);
+    if(r&&r.value){
+      const d=JSON.parse(r.value);
+      sharedData={...sharedData,...d,
+        gastosFijos:{...sharedData.gastosFijos,...(d.gastosFijos||{})},
+        usuarios:d.usuarios||sharedData.usuarios,
+        usuariosActivity:{...(sharedData.usuariosActivity||{}),...(d.usuariosActivity||{})}
+      };
+    }
+    lastSyncAt=new Date();
+    setSyncState('ok');
+    showBanner('Sincronizado ✅','ok');
+    applyGastosFijosToUI();
+    syncUserGrid();
+    render();
+    updateSyncTime();
+  }catch(e){setSyncState('ok');hideBanner();}
+}
+
+async function cloudSave(){
+  setSyncState('syncing');
+  sharedData.lastUpdatedBy=activeUser;
+  sharedData.lastUpdatedAt=new Date().toISOString();
+  try{
+    await window.storage.set(STORAGE_KEY,JSON.stringify(sharedData),true);
+    lastSyncAt=new Date();setSyncState('ok');updateSyncTime();
+  }catch(e){setSyncState('error');toast('Error al guardar en la nube ❌');}
+}
+
+async function forcSync(){await cloudLoad();toast('Sincronización completada ✅');}
+setInterval(()=>{if(activeUser)cloudLoad();},20000);
+
+function updateSyncTime(){
+  const el=document.getElementById('last-sync-time');
+  if(el&&lastSyncAt){
+    const by=sharedData.lastUpdatedBy?' · Último cambio: '+sharedData.lastUpdatedBy:'';
+    el.textContent='Sincronizado: '+lastSyncAt.toLocaleTimeString('es-ES')+by;
+  }
+}
+
+// ======== CONFIG LOCAL ========
+let cfg={nom:'Ali Eduardo Rebolledo Lozada',nif:'56010757F',dir:'Calle Sant Isidre 85, Esc Bajo, Local 2',cp:'08850',ciudad:'Gavà (Barcelona)',tel:'+34 930092059',pre:''};
+
+function loadCfgLocal(){
+  const s=localStorage.getItem('autohr-cfg-v2');
+  if(s){try{Object.assign(cfg,JSON.parse(s));}catch(e){}}
+  ['nom','nif','dir','cp','ciudad','tel'].forEach(k=>{const el=document.getElementById('cfg-'+k);if(el)el.value=cfg[k]||'';});
+  const pre=document.getElementById('cfg-pre');if(pre)pre.value=cfg.pre||'';
+  const num=document.getElementById('cfg-num');if(num)num.value=String(sharedData.numNext||56).padStart(3,'0');
+}
+
+function saveCfgLocal(){
+  cfg.nom=v('cfg-nom');cfg.nif=v('cfg-nif');cfg.dir=v('cfg-dir');cfg.cp=v('cfg-cp');cfg.ciudad=v('cfg-ciudad');cfg.tel=v('cfg-tel');cfg.pre=v('cfg-pre');
+  localStorage.setItem('autohr-cfg-v2',JSON.stringify(cfg));
+  toast('Datos guardados ✅');
+}
+
+function v(id){const el=document.getElementById(id);return el?el.value:'';}
+function vn(id,def=0){return parseFloat(v(id))||def;}
+
+// Aplica gastos fijos del cloud a los inputs de ajustes
+function applyGastosFijosToUI(){
+  const gf=sharedData.gastosFijos||{};
+  const m={'cfg-alquiler':gf.alquiler??800,'cfg-sumi':gf.sumi??150,'cfg-gest':gf.gest??100,'cfg-cuota-ali':gf.cuotaAli??0,'cfg-cuota-yusef':gf.cuotaYusef??0,'cfg-prestamo':gf.prestamo??0,'cfg-prestamo-nombre':gf.prestamoNombre??''};
+  Object.entries(m).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+}
+
+async function saveCfgFiscal(){
+  sharedData.gastosFijos={
+    alquiler:vn('cfg-alquiler',800),sumi:vn('cfg-sumi',150),gest:vn('cfg-gest',100),
+    cuotaAli:vn('cfg-cuota-ali',0),cuotaYusef:vn('cfg-cuota-yusef',0),
+    prestamo:vn('cfg-prestamo',0),prestamoNombre:v('cfg-prestamo-nombre')
+  };
+  await cloudSave();
+  toast('Gastos fijos guardados y sincronizados ✅');
+  render();
+}
+
+// ======== USUARIOS ========
+function setUser(u){
+  activeUser=u;
+  document.getElementById('user-modal').classList.remove('open');
+  document.getElementById('topbar-user').textContent=u+' · Gavà';
+  document.getElementById('cfg-user-display').textContent=u;
+  const sel=document.getElementById('f-asig');
+  if(sel)for(let o of sel.options)if(o.value===u){sel.value=u;break;}
+  sharedData.usuariosActivity=sharedData.usuariosActivity||{};
+  sharedData.usuariosActivity[u]=Date.now();
+  cloudSave().then(()=>cloudLoad());
+}
+
+function openUserModal(){document.getElementById('user-modal').classList.add('open');}
+
+function syncUserGrid(){
+  const g=document.getElementById('user-grid');
+  if(!g)return;
+  const emojis=['👨‍🔧','👩‍🔧','🧑‍🔧','👨‍💼','👩‍💼'];
+  g.innerHTML=(sharedData.usuarios||['Ali','Yusef']).map((u,i)=>
+    `<button class="user-btn" onclick="setUser('${u}')"><div style="font-size:32px">${emojis[i%emojis.length]}</div><div class="uname">${u}</div><div class="urole">Taller</div></button>`
+  ).join('');
+}
+
+async function addUser(){
+  const name=(v('new-user-name')||'').trim();
+  if(!name){toast('Escribe un nombre');return;}
+  if((sharedData.usuarios||[]).map(u=>u.toLowerCase()).includes(name.toLowerCase())){toast('Ese usuario ya existe');return;}
+  sharedData.usuarios=[...(sharedData.usuarios||[]),name];
+  document.getElementById('new-user-name').value='';
+  await cloudSave();
+  syncUserGrid();
+  renderUsersOnline();
+  toast(name+' añadido ✅');
+}
+
+function renderUsersOnline(){
+  const el=document.getElementById('users-online-list');
+  if(!el)return;
+  const act=sharedData.usuariosActivity||{};
+  el.innerHTML=(sharedData.usuarios||[]).map(u=>{
+    const ts=act[u];
+    const ago=ts?Math.round((Date.now()-ts)/60000):null;
+    const when=ago===null?'Sin actividad':ago===0?'Ahora mismo':'Hace '+ago+' min';
+    const isMe=u===activeUser;
+    return `<div class="lr"><div><div style="font-size:13px;font-weight:600">${u}${isMe?' <span style="font-size:10px;color:#007AFF">(tú)</span>':''}</div><div style="font-size:11px;color:#8e8e93">${when}</div></div><span class="chip ${ago!==null&&ago<5?'cg':'cb'}" style="font-size:10px">${ago!==null&&ago<5?'Activo':'—'}</span></div>`;
+  }).join('');
+}
+
+// ======== FACTURAS ========
+function getNum(){return (cfg.pre||'')+'F'+String(sharedData.numNext||56).padStart(3,'0');}
+function todayStr(){return new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function calcT(){const b=parseFloat(v('f-base'))||0,i=parseInt(v('f-iva'));document.getElementById('f-tot').textContent=fmt(b*(1+i/100));}
+
+function allFact(){
+  const baseF=cobrosBase.map(c=>({id:c.factura,cliente:c.cliente,nif:'',dir:'',matricula:c.matricula,concepto:c.notas,base:c.importe,iva:21,estado:(sharedData.cobrosEstados[c.factura]||c.estado).toLowerCase()==='pagado'?'cobrada':'pendiente',fecha:c.fecha,asig:'Ali',isBase:true}));
+  return[...sharedData.facturas,...baseF];
+}
+
+let ffilt='todas';
+function fFilter(f,b){ffilt=f;document.querySelectorAll('.ftabs .tab').forEach(t=>t.classList.remove('active'));if(b)b.classList.add('active');rFact();}
+
+function factCard(f){
+  const isNew=!f.isBase&&f.creadaPor&&f.creadaPor!==activeUser;
+  return `<div class="card">${isNew?`<div style="font-size:10px;font-weight:700;color:#007AFF;margin-bottom:5px">🆕 Añadida por ${f.creadaPor}</div>`:''}
+    <div class="crow"><div><div class="ct">${f.cliente}<span style="font-size:11px;color:#8e8e93"> · ${f.asig||'Ali'}</span></div><div class="cs">${f.id} · ${f.matricula||'—'}</div></div><span class="chip ${chipC(f.estado)}">${chipT(f.estado)}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px"><span style="font-size:12px;color:#555;flex:1;margin-right:8px">${(f.concepto||'').substring(0,38)}${(f.concepto||'').length>38?'…':''}</span><span class="au">${fmt(f.base*(1+(f.iva||21)/100))}</span></div>
+    ${f.estado==='pendiente'?`<button class="btn bs bsm" style="margin-top:9px;width:100%" onclick="marcarC('${f.id}')">✓ Marcar cobrada</button>`:''}
+  </div>`;
+}
+
+async function addFactura(){
+  const cli=v('f-cli').trim(),base=parseFloat(v('f-base'))||0;
+  if(!cli||!base){toast('Rellena cliente e importe');return;}
+  const num=getNum();sharedData.numNext=(sharedData.numNext||56)+1;
+  sharedData.facturas.unshift({id:num,cliente:cli,nif:v('f-nif'),dir:v('f-dir'),matricula:v('f-mat')||'—',concepto:v('f-conc')||'Trabajo taller',base,iva:parseInt(v('f-iva')),estado:v('f-est'),fecha:new Date().toISOString().split('T')[0],asig:v('f-asig'),creadaPor:activeUser,ts:Date.now()});
+  await cloudSave();closeFact();toast('Factura '+num+' guardada ✅ · visible para todos');render();
+}
+
+async function marcarC(id){
+  const f=sharedData.facturas.find(x=>x.id===id);
+  if(f){f.estado='cobrada';f.cobradaPor=activeUser;f.cobradaTs=Date.now();}
+  else{sharedData.cobrosEstados[id]='Pagado';}
+  await cloudSave();toast('Cobro registrado ✅');render();
+}
+
+let pendPlate=null;
+function onPlate(el){
+  const val=el.value.toUpperCase().replace(/\s/g,'');el.value=val;
+  const sg=document.getElementById('psug'),ph=document.getElementById('plate-hist');
+  if(val.length<3){sg.classList.remove('show');ph.style.display='none';pendPlate=null;return;}
+  const m=vehiclesData.find(x=>x.plate.toUpperCase().includes(val));
+  if(m){pendPlate=m;sg.innerHTML=`<b>🚗 ${m.plate}</b> · ${m.client} · ${m.jobs.length} visita(s)`;sg.classList.add('show');if(val===m.plate.toUpperCase())applyPlate();}
+  else{pendPlate=null;sg.classList.remove('show');ph.style.display='none';}
+}
+function applyPlate(){
+  if(!pendPlate)return;
+  document.getElementById('f-mat').value=pendPlate.plate;
+  document.getElementById('f-cli').value=pendPlate.client;
+  document.getElementById('psug').classList.remove('show');
+  const ph=document.getElementById('plate-hist'),pj=document.getElementById('plate-jobs');
+  ph.style.display='block';
+  pj.innerHTML=pendPlate.jobs.map(j=>`<div style="padding:7px 0;border-bottom:1px solid #f5f5f7"><div style="font-size:10px;color:#8e8e93">${j.fecha} · ${j.factura}</div><div style="font-size:12px;margin:2px 0">${j.concepto}</div><div style="display:flex;justify-content:space-between"><span class="chip ${chipC(j.estado)}" style="font-size:10px">${chipT(j.estado)}</span><span style="font-size:12px;font-weight:600;color:#007AFF">${fmt(j.total)}</span></div></div>`).join('');
+}
+function openFact(){
+  pendPlate=null;
+  ['f-mat','f-cli','f-nif','f-dir','f-conc','f-base'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-tot').textContent='0,00 €';
+  document.getElementById('psug').classList.remove('show');
+  document.getElementById('plate-hist').style.display='none';
+  document.getElementById('fact-form').style.display='block';
+  document.getElementById('fact-prev').style.display='none';
+  document.getElementById('fact-stitle').textContent='Nueva factura · '+getNum()+' ('+activeUser+')';
+  const sel=document.getElementById('f-asig');
+  if(sel&&activeUser)for(let o of sel.options)if(o.value===activeUser){sel.value=activeUser;break;}
+  document.getElementById('ov-fact').classList.add('open');
+}
+function closeFact(){document.getElementById('ov-fact').classList.remove('open');}
+document.getElementById('ov-fact').addEventListener('click',function(e){if(e.target===this)closeFact();});
+
+// ======== GASTOS ========
+async function addGasto(){
+  const c=v('g-c').trim(),imp=parseFloat(v('g-i'))||0;
+  if(!c||!imp){toast('Rellena concepto e importe');return;}
+  sharedData.gastos.unshift({concepto:c,proveedor:v('g-p'),importe:imp,iva:parseInt(v('g-v')),cat:v('g-k'),fecha:v('g-f'),creadoPor:activeUser,ts:Date.now()});
+  document.getElementById('g-c').value='';document.getElementById('g-i').value='';
+  await cloudSave();toast('Gasto guardado ✅ · visible para todos');render();
+}
+
+// ======== IA ========
+async function askAI(){
+  const q=v('ai-q').trim();if(!q)return;
+  document.getElementById('ai-ld').classList.add('show');
+  document.getElementById('ai-resp').classList.remove('show');
+  const gf=sharedData.gastosFijos||{};
+  const ctx=`Eres el asistente del taller Auto H&R (Gavà, Barcelona). Propietarios: Ali y Yusef. Responde en español conciso.
+VEHÍCULOS: ${JSON.stringify(vehiclesData.map(v=>({plate:v.plate,client:v.client,nJobs:v.jobs.length})))}
+COBROS BASE: ${JSON.stringify(cobrosBase)}
+FACTURAS NUEVAS: ${JSON.stringify(sharedData.facturas)}
+GASTOS NUEVOS: ${JSON.stringify(sharedData.gastos)}
+GASTOS FIJOS: alquiler=${gf.alquiler}€ sumi=${gf.sumi}€ gest=${gf.gest}€ cuotaAli=${gf.cuotaAli}€ cuotaYusef=${gf.cuotaYusef}€ prestamo=${gf.prestamo}€ (${gf.prestamoNombre||'sin nombre'})`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:ctx,messages:[{role:'user',content:q}]})});
+    const d=await r.json();
+    document.getElementById('ai-resp').textContent=d.content?.find(b=>b.type==='text')?.text||'Sin respuesta.';
+    document.getElementById('ai-resp').classList.add('show');
+  }catch(e){document.getElementById('ai-resp').textContent='Error de conexión.';document.getElementById('ai-resp').classList.add('show');}
+  document.getElementById('ai-ld').classList.remove('show');
+  document.getElementById('ai-q').value='';
+}
+
+// ======== RENDER ========
+function render(){rInicio();rFact();rGas();rCobros();rIRPF();renderUsersOnline();}
+
+function rInicio(){
+  const all=allFact();
+  const pend=all.filter(f=>f.estado==='pendiente');
+  const pT=pend.reduce((a,f)=>a+f.base*(1+(f.iva||21)/100),0);
+  const t1M=['Enero','Febrero','Marzo'];
+  const ingBase=mesesData.filter(m=>t1M.includes(m.mes)).reduce((a,m)=>a+m.ingresos,0);
+  const ingNew=sharedData.facturas.filter(f=>f.estado==='cobrada').reduce((a,f)=>a+f.base,0);
+  const gasBase=mesesData.filter(m=>t1M.includes(m.mes)).reduce((a,m)=>a+m.gf+m.gv,0);
+  const gasNew=sharedData.gastos.reduce((a,g)=>a+g.importe,0);
+  const ing=ingBase+ingNew,gas=gasBase+gasNew,res=ing-gas;
+  document.getElementById('topbadge').textContent=pend.length+' pendientes';
+  const newF=sharedData.facturas.filter(f=>f.creadaPor&&f.creadaPor!==activeUser);
+  const nb=document.getElementById('new-count-badge');
+  if(newF.length>0){nb.textContent=newF.length+' nuevas';nb.style.display='inline';}else{nb.style.display='none';}
+  document.getElementById('dash-m').innerHTML=
+    `<div class="metric"><div class="mv">${(ing/1000).toFixed(1)}K €</div><div class="ml">Ingresos 2026</div></div>
+     <div class="metric"><div class="mv" style="color:#ff3b30">${(gas/1000).toFixed(1)}K €</div><div class="ml">Gastos 2026</div></div>
+     <div class="metric"><div class="mv" style="color:#ff9500">${fmt(pT)}</div><div class="ml">Pendiente cobro</div></div>
+     <div class="metric"><div class="mv" style="color:${res>=0?'#34c759':'#ff3b30'}">${fmt(Math.abs(res))}</div><div class="ml">Resultado</div></div>`;
+  document.getElementById('dash-rec').innerHTML=allFact().slice(0,5).map(f=>factCard(f)).join('');
+}
+
+function rFact(){
+  let s=allFact();
+  if(ffilt==='pendiente')s=s.filter(f=>f.estado==='pendiente');
+  else if(ffilt==='cobrada')s=s.filter(f=>f.estado==='cobrada');
+  else if(ffilt==='ali')s=s.filter(f=>f.asig==='Ali');
+  else if(ffilt==='yusef')s=s.filter(f=>f.asig==='Yusef');
+  document.getElementById('fact-list').innerHTML=s.length?s.map(f=>factCard(f)).join(''):'<div style="color:#8e8e93;font-size:13px;padding:18px 0;text-align:center">Sin facturas</div>';
+}
+
+function rGas(){
+  document.getElementById('gasto-list').innerHTML=sharedData.gastos.length?sharedData.gastos.map(g=>
+    `<div class="lr"><div><div style="font-size:13px">${g.concepto}</div><div style="font-size:11px;color:#8e8e93">${g.proveedor} · ${g.cat}${g.creadoPor?' · '+g.creadoPor:''}</div></div><span class="an">-${fmt(g.importe*(1+(g.iva||21)/100))}</span></div>`
+  ).join(''):'<div style="color:#8e8e93;font-size:12px;padding:10px 0">Sin gastos registrados</div>';
+}
+
+function rCobros(){
+  const cobros=cobrosBase.map(c=>({...c,estado:sharedData.cobrosEstados[c.factura]||c.estado}));
+  const pend=cobros.filter(c=>c.estado==='Pendiente');
+  document.getElementById('cobros-list').innerHTML=pend.length?pend.map(c=>{
+    const cl=c.dias>30?'cr':c.dias>15?'ca':'cg';
+    return `<div class="card"><div class="crow"><div><div class="ct">${c.cliente}</div><div class="cs">${c.factura} · ${c.fecha}</div></div><span class="chip ${cl}">${c.dias}d</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px"><span class="pb">${c.matricula}</span><span class="au">${fmt(c.importe)}</span></div><div style="font-size:11px;color:#555;margin-top:5px">${c.notas}</div><button class="btn bs bsm" style="margin-top:9px;width:100%" onclick="marcarC('${c.factura}')">✓ Cobrado</button></div>`;
+  }).join(''):'<div style="color:#34c759;font-size:14px;padding:18px 0;text-align:center;font-weight:600">Todo cobrado ✓</div>';
+  document.getElementById('veh-list').innerHTML=vehiclesData.map(v=>
+    `<div class="card"><div class="crow"><div><span class="pb">${v.plate}</span><div class="cs" style="margin-top:4px">${v.client}</div></div><span class="chip cb">${v.jobs.length} visita${v.jobs.length!==1?'s':''}</span></div><div style="font-size:11px;color:#555;margin-top:6px">${v.jobs.slice(0,2).map(j=>j.fecha+': '+j.concepto.substring(0,34)+'…').join('<br>')}</div></div>`
+  ).join('');
+}
+
+function rIRPF(){
+  const gf=sharedData.gastosFijos||{};
+  const alq=gf.alquiler??800,sumi=gf.sumi??150,gest=gf.gest??100;
+  const cuotaA=gf.cuotaAli??0,cuotaY=gf.cuotaYusef??0,prest=gf.prestamo??0;
+  const cobE=sharedData.cobrosEstados||{};
+  const ingCob=cobrosBase.filter(c=>(cobE[c.factura]||c.estado)==='Pagado').reduce((a,c)=>a+c.importe,0)
+    +sharedData.facturas.filter(f=>f.estado==='cobrada').reduce((a,f)=>a+f.base,0);
+  // Gastos deducibles IRPF (préstamo excluido — solo intereses deducibles)
+  const dedAlq=alq*3,dedSumi=sumi*3,dedGest=gest*3;
+  const dedCuotaA=cuotaA*3,dedCuotaY=cuotaY*3;
+  const dedPiezas=sharedData.gastos.filter(g=>g.cat==='Piezas y recambios').reduce((a,g)=>a+g.importe,0)+5093.24;
+  const dedOtros=sharedData.gastos.filter(g=>g.cat!=='Piezas y recambios').reduce((a,g)=>a+g.importe,0);
+  const gasTotal=dedAlq+dedSumi+dedGest+dedCuotaA+dedCuotaY+dedPiezas+dedOtros;
+  const rnd=ingCob-gasTotal,cuota=Math.max(0,rnd*0.2);
+  const pct=ingCob>0?Math.min(100,cuota/ingCob*100):0;
+  const el=id=>document.getElementById(id);
+  el('irpf-cuota').textContent=fmt(cuota);
+  el('irpf-ing').textContent=fmt(ingCob);
+  el('irpf-gas').textContent=fmt(gasTotal);
+  el('irpf-rdo').textContent=fmt(rnd);
+  el('irpf-progress').style.width=pct+'%';
+  el('irpf-progress').className='progress-fill'+(pct>25?' danger':pct>15?' warn':'');
+  el('irpf-progress-pct').textContent=pct.toFixed(1)+'%';
+  // Detalle deducciones
+  const filas=[
+    {label:'Alquiler local',sub:'3 meses',val:dedAlq},
+    {label:'Suministros',sub:'3 meses',val:dedSumi},
+    {label:'Gestoría / Asesoría',sub:'3 meses',val:dedGest},
+    {label:'Cuota SS Ali',sub:cuotaA+'€/mes × 3',val:dedCuotaA},
+    {label:'Cuota SS Yusef',sub:cuotaY+'€/mes × 3',val:dedCuotaY},
+    {label:'Piezas y recambios',sub:'100% deducible',val:dedPiezas},
+    {label:'Otros gastos',sub:'Según categoría',val:dedOtros},
+  ];
+  el('ded-detalle').innerHTML=filas.map(f=>
+    `<div class="ded-item"><div><div>${f.label}</div><div style="font-size:10px;color:#8e8e93">${f.sub}</div></div><div class="ded-val">${fmt(f.val)}</div></div>`
+  ).join('')
+  +'<div class="divider"></div>'
+  +`<div class="ded-item"><div><b>TOTAL deducible</b></div><div class="ded-val" style="font-size:15px">${fmt(gasTotal)}</div></div>`
+  +(prest>0?`<div class="ded-item" style="margin-top:8px;background:#fff8e1;border-radius:8px;padding:8px;display:flex;justify-content:space-between"><div><div style="font-size:12px;color:#856404;font-weight:600">⚠️ Préstamo ${gf.prestamoNombre?'('+gf.prestamoNombre+')':''}</div><div style="font-size:10px;color:#8e8e93">Cuota total: ${fmt(prest*3)} · solo intereses deducibles</div></div></div>`:'');
+  // Trimestres
+  const trims=[
+    {n:'1T',label:'1T Ene–Mar',meses:['Enero','Febrero','Marzo'],plazo:'20 abril 2026',ant:0,useLive:true},
+    {n:'2T',label:'2T Abr–Jun',meses:[],plazo:'20 julio 2026',ant:cuota,useLive:false},
+    {n:'3T',label:'3T Jul–Sep',meses:[],plazo:'20 oct 2026',ant:0,useLive:false},
+    {n:'4T',label:'4T Oct–Dic',meses:['Octubre','Noviembre','Diciembre'],plazo:'30 ene 2027',ant:0,useLive:false}
+  ];
+  el('trim-list').innerHTML=trims.map(tr=>{
+    const tI=tr.useLive?ingCob:mesesData.filter(m=>tr.meses.includes(m.mes)).reduce((a,m)=>a+m.ingresos,0);
+    const tG=tr.useLive?gasTotal:mesesData.filter(m=>tr.meses.includes(m.mes)).reduce((a,m)=>a+m.gf+m.gv,0);
+    const tR=tI-tG,tC=Math.max(0,tR*0.2-tr.ant);
+    return `<div class="trim-card"><div class="trim-header"><span class="trim-name">📅 ${tr.label}</span><span class="trim-status">Pendiente</span></div>
+      <div class="trim-row"><span>Ingresos</span><span>${fmt(tI)}</span></div>
+      <div class="trim-row"><span>Gastos</span><span>-${fmt(tG)}</span></div>
+      <div class="trim-row"><span>Rendimiento</span><span style="color:${tR>=0?'#34c759':'#ff3b30'}">${fmt(tR)}</span></div>
+      <div class="trim-row"><span>Cuota M130</span><span style="color:#007AFF">${fmt(tC)}</span></div>
+      <div style="font-size:11px;color:#8e8e93;margin-top:6px">📅 ${tr.plazo}</div></div>`;
+  }).join('');
+}
+
+function calcTrimManual(){
+  const ing=parseFloat(v('calc-ing'))||0,gas=parseFloat(v('calc-gas'))||0,ant=parseFloat(v('calc-ant'))||0;
+  const rnd=ing-gas,c=Math.max(0,rnd*0.2-ant);
+  document.getElementById('calc-result').textContent=fmt(c);
+  document.getElementById('calc-detail').textContent='Rendimiento: '+fmt(rnd)+' · 20% = '+fmt(rnd*0.2)+(ant>0?' - pagos ant: '+fmt(ant):'');
+}
+
+// ======== FACTURA PDF ========
+function buildInvHTML(forPrint){
+  const base=parseFloat(v('f-base'))||0,iva=parseInt(v('f-iva'));
+  const ivaAmt=base*iva/100,total=base+ivaAmt;
+  const fs=forPrint?'14px':'12px';
+  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:${forPrint?'30px':'16px'};font-size:${fs}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #007AFF">
+      <div><div style="font-size:${forPrint?'24px':'17px'};font-weight:700;color:#007AFF">AUTO H&R</div><div style="font-size:12px;color:#555;margin-top:2px">Taller Mecánico · Gavà</div></div>
+      <div style="text-align:right"><div style="font-size:${forPrint?'18px':'14px'};font-weight:700">FACTURA ${getNum()}</div><div style="color:#555">Fecha: ${todayStr()}</div><div style="margin-top:6px;background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:6px;display:inline-block;font-weight:600">🚗 ${v('f-mat')||'—'}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div><div style="font-size:10px;font-weight:700;color:#8e8e93;text-transform:uppercase;margin-bottom:5px">Emisor</div><div style="font-weight:700">${cfg.nom}</div><div style="color:#555;line-height:1.6">NIF: ${cfg.nif}<br>${cfg.dir}<br>${cfg.cp} ${cfg.ciudad}<br>${cfg.tel}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:#8e8e93;text-transform:uppercase;margin-bottom:5px">Cliente</div><div style="font-weight:700">${v('f-cli')||'—'}</div><div style="color:#555;line-height:1.6">NIF/CIF: ${v('f-nif')||'—'}<br>${v('f-dir')||'—'}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+      <thead><tr style="border-bottom:1px solid #e5e5ea"><th style="text-align:left;padding:6px 4px;color:#8e8e93;font-size:10px;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 4px;color:#8e8e93;font-size:10px;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 4px;color:#8e8e93;font-size:10px;text-transform:uppercase">IVA ${iva}%</th><th style="text-align:right;padding:6px 4px;color:#8e8e93;font-size:10px;text-transform:uppercase">Total</th></tr></thead>
+      <tbody><tr><td style="padding:10px 4px">${v('f-conc')||'Trabajo de taller'}</td><td style="padding:10px 4px;text-align:right">${fmt(base)}</td><td style="padding:10px 4px;text-align:right">${fmt(ivaAmt)}</td><td style="padding:10px 4px;text-align:right;font-weight:700">${fmt(total)}</td></tr></tbody>
+    </table>
+    <div style="margin-left:auto;width:55%">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;color:#555">Base imponible<span>${fmt(base)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;color:#555">IVA (${iva}%)<span>${fmt(ivaAmt)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1d1d1f;font-weight:700;font-size:${forPrint?'16px':'14px'}">TOTAL<span>${fmt(total)}</span></div>
+    </div>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid #e5e5ea;font-size:10px;color:#8e8e93;text-align:center">Autónomo · Régimen General IVA · ${cfg.nom} · NIF ${cfg.nif}</div>
+  </div>`;
+}
+function showPreview(){document.getElementById('inv-html').innerHTML=buildInvHTML(false);document.getElementById('fact-form').style.display='none';document.getElementById('fact-prev').style.display='block';}
+function backForm(){document.getElementById('fact-form').style.display='block';document.getElementById('fact-prev').style.display='none';}
+function printFactura(){const w=window.open('','_blank');w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factura ${getNum()}</title><style>body{margin:0;padding:0;background:#fff}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>${buildInvHTML(true)}<script>window.onload=function(){window.print();}<\/script></body></html>`);w.document.close();}
+
+// ======== INIT ========
+document.getElementById('g-f').value=new Date().toISOString().split('T')[0];
+loadCfgLocal();
+syncUserGrid(); // muestra botones por defecto antes de cargar cloud
+</script>
+</body>
+</html>
