@@ -258,6 +258,7 @@ textarea{resize:vertical;min-height:60px}
     </div>
     <div class="lbl">Datos</div>
     <button class="btn" onclick="syncNow()">Sincronizar ahora</button>
+    <button class="btn bs" onclick="testConexion()">Verificar conexion JSONBin</button>
     <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
     <div class="lbl">Sesion</div>
     <button class="btn br" onclick="logout()">Cerrar sesion</button>
@@ -395,7 +396,7 @@ textarea{resize:vertical;min-height:60px}
 // CONSTANTS
 // ============================================================
 var MESES_I = ['Sep-25','Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
-var MESES_C = ['Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
+var MESES_C = ['Sep-25','Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
 var ML = {'Sep-25':'Septiembre 2025','Oct-25':'Octubre 2025','Nov-25':'Noviembre 2025','Dic-25':'Diciembre 2025','Ene-26':'Enero 2026','Feb-26':'Febrero 2026','Mar-26':'Marzo 2026','Abr-26':'Abril 2026','May-26':'Mayo 2026','Jun-26':'Junio 2026','Jul-26':'Julio 2026','Ago-26':'Agosto 2026','Sep-26':'Septiembre 2026','Oct-26':'Octubre 2026','Nov-26':'Noviembre 2026','Dic-26':'Diciembre 2026'};
 var JBIN = 'https://api.jsonbin.io/v3/b/';
 
@@ -403,7 +404,7 @@ var JBIN = 'https://api.jsonbin.io/v3/b/';
 // STATE
 // ============================================================
 var BIN = '', KEY = '', USER = '', lastSync = null;
-var curFT = 'Abr-26', curPT = 'Abr-26', curGVT = 'Abr-26';
+var curFT = 'Abr-26', curPT = 'Sep-25', curGVT = 'Ene-26';
 
 var SD = {
   facturas: [
@@ -485,8 +486,8 @@ var SD = {
   ],
   proveedores: [
     // SEP-25 (2 - NUEVOS, no estaban en app)
-    {id:'p000a',mes:'Sep-25',fecha:'2025-09-20',num:'FAB25049098',proveedor:'Adbosch',base:726.16,iva:152.49,total:878.65,concepto:'Piezas 10 nov 25',estado:'Pagado'},
-    {id:'p000b',mes:'Sep-25',fecha:'2025-09-13',num:'1166797207',proveedor:'Berner',base:477.54,iva:100.28,total:577.82,concepto:'Piezas 22 nov',estado:'Pagado'},
+    {id:'p000a',mes:'Sep-25',fecha:'2025-09-30',num:'FAB25049098',proveedor:'Adbosch',base:726.16,iva:152.49,total:878.65,concepto:'Piezas 10 nov 25',estado:'Pagado'},
+    {id:'p000b',mes:'Sep-25',fecha:'2025-09-23',num:'1166797207',proveedor:'Berner',base:477.54,iva:100.28,total:577.82,concepto:'Piezas 22 nov',estado:'Pagado'},
     // OCT-25 (2)
     {id:'p001',mes:'Oct-25',fecha:'2025-10-21',num:'1166836104',proveedor:'Berner',base:103.21,iva:21.67,total:124.88,concepto:'Piezas 31 Oct 25',estado:'Pagado'},
     {id:'p002',mes:'Oct-25',fecha:'2025-10-15',num:'FAB25051208',proveedor:'Adbosch',base:483.79,iva:101.60,total:585.39,concepto:'Piezas Oct 25',estado:'Pagado'},
@@ -587,55 +588,74 @@ async function cloudGet(){
   if(!BIN||!KEY) return;
   setSyncStatus('sy');
   try{
-    var r = await fetch(JBIN+BIN+'/latest',{headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
-    if(!r.ok) throw new Error();
+    var r = await fetch(JBIN+BIN+'/latest',{
+      method:'GET',
+      mode:'cors',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false','Content-Type':'application/json'}
+    });
+    if(r.status===401||r.status===403){
+      setSyncStatus('err');
+      g('slbl').textContent='API Key incorrecta';
+      return;
+    }
+    if(r.status===404){
+      setSyncStatus('err');
+      g('slbl').textContent='Bin ID incorrecto';
+      return;
+    }
+    if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error '+r.status; return; }
     var d = await r.json();
     var needsPush = false;
-    if(d && typeof d === 'object'){
-      // Solo usar datos del servidor si tiene MAS o igual facturas que local
-      if(d.facturas && d.facturas.length >= SD.facturas.length){
-        SD.facturas = d.facturas;
-      } else if(!d.facturas || d.facturas.length < SD.facturas.length){
-        needsPush = true; // servidor tiene menos datos, subir los locales
-      }
-      if(d.proveedores && d.proveedores.length >= SD.proveedores.length){
-        SD.proveedores = d.proveedores;
-      } else {
-        needsPush = true;
-      }
-      if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos = d.gastosFijos;
-      if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables = d.gastosVariables;
-      if(d.numNext && d.numNext > SD.numNext) SD.numNext = d.numNext;
-    } else {
-      needsPush = true;
-    }
-    lastSync = new Date();
+    if(d && typeof d==='object'){
+      if(d.facturas && d.facturas.length>=SD.facturas.length){ SD.facturas=d.facturas; }
+      else { needsPush=true; }
+      if(d.proveedores && d.proveedores.length>=SD.proveedores.length){ SD.proveedores=d.proveedores; }
+      else { needsPush=true; }
+      if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos=d.gastosFijos;
+      if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables=d.gastosVariables;
+      if(d.numNext && d.numNext>SD.numNext) SD.numNext=d.numNext;
+    } else { needsPush=true; }
+    lastSync=new Date();
     setSyncStatus('ok');
     updateSyncLabel();
     renderAll();
-    // Si el servidor tiene datos desactualizados, subir los completos
-    if(needsPush){
-      console.log('Servidor desactualizado, subiendo datos completos...');
-      await cloudPut();
+    if(needsPush) await cloudPut();
+  }catch(e){
+    setSyncStatus('err');
+    var msg = e.message||'';
+    if(msg.includes('Load failed')||msg.includes('Failed to fetch')||msg.includes('NetworkError')){
+      g('slbl').textContent='Sin conexion a JSONBin';
+      toast('Sin conexion. Comprueba Bin ID y API Key en Ajustes.');
+    } else {
+      g('slbl').textContent='Error red';
     }
-  }catch(e){ setSyncStatus('err'); console.log('cloudGet error:', e); }
+    console.log('cloudGet error:', e.message);
+    renderAll(); // mostrar datos locales aunque falle la red
+  }
 }
 
 async function cloudPut(){
   if(!BIN||!KEY) return;
   setSyncStatus('sy');
   try{
-    await fetch(JBIN+BIN,{
+    var r = await fetch(JBIN+BIN,{
       method:'PUT',
+      mode:'cors',
       headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify(Object.assign({}, SD, {user: USER, lastSyncUser: USER, lastSyncTime: new Date().toISOString()}))
+      body:JSON.stringify(Object.assign({},SD,{user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString()}))
     });
-    lastSync = new Date();
+    if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error guardando'; return; }
+    lastSync=new Date();
     setSyncStatus('ok');
-  }catch(e){ setSyncStatus('err'); }
+    updateSyncLabel();
+  }catch(e){
+    setSyncStatus('err');
+    g('slbl').textContent='Error guardando';
+    console.log('cloudPut error:', e.message);
+  }
 }
 
-async function syncNow(){ await cloudGet(); toast('Datos actualizados'); }
+async function syncNow(){ await cloudGet(); toast('Sincronizacion completada'); }
 
 // ============================================================
 // SETUP & LOGIN
@@ -1339,6 +1359,28 @@ function doPrint(){
 // ============================================================
 // EXPORT
 // ============================================================
+async function testConexion(){
+  if(!BIN||!KEY){ toast('Introduce Bin ID y API Key primero'); return; }
+  toast('Probando conexion...');
+  try{
+    var r = await fetch(JBIN+BIN+'/latest',{
+      method:'GET',mode:'cors',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false','Content-Type':'application/json'}
+    });
+    if(r.status===200){ toast('Conexion OK - JSONBin responde correctamente'); }
+    else if(r.status===401||r.status===403){ toast('ERROR: API Key incorrecta ('+r.status+')'); }
+    else if(r.status===404){ toast('ERROR: Bin ID incorrecto (404)'); }
+    else { toast('ERROR: codigo '+r.status); }
+  }catch(e){
+    var m = e.message||'';
+    if(m.includes('Load failed')||m.includes('Failed to fetch')){
+      toast('ERROR red: JSONBin bloqueado. Prueba en Safari abriendo: api.jsonbin.io');
+    } else {
+      toast('ERROR: '+m);
+    }
+  }
+}
+
 function exportJSON(){
   var blob = new Blob([JSON.stringify(SD,null,2)],{type:'application/json'});
   var a = document.createElement('a');
