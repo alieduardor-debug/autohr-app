@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Auto H&R">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>Auto H&R</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#2563eb;--green:#16a34a;--red:#dc2626;--orange:#d97706;--purple:#7c3aed;
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--border2:#cbd5e1;
+  --t1:#0f172a;--t2:#334155;--t3:#64748b;--t4:#94a3b8;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--t1);overscroll-behavior:none}
+.app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+/* Topbar */
+.topbar{background:var(--t1);padding:52px 16px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.tit{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.tit small{color:#94a3b8;font-weight:400;font-size:12px;display:block;margin-top:1px}
+.sync-row{display:flex;align-items:center;gap:6px}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.sdot.sy{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.slbl{font-size:11px;color:#94a3b8}
+
+/* Navbar */
+.navbar{background:var(--t1);border-top:1px solid #1e293b;display:grid;grid-template-columns:repeat(5,1fr);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding-bottom:env(safe-area-inset-bottom,8px)}
+.nb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;border:none;background:transparent;cursor:pointer;font-size:9px;color:#64748b;font-family:inherit;-webkit-appearance:none}
+.nb.on{color:#fff}
+.ni{font-size:20px;line-height:1.2}
+
+/* Content */
+.content{flex:1;overflow-y:auto;padding:12px 14px 110px}
+.sec{display:none}.sec.on{display:block}
+
+/* Typography */
+.lbl{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin:14px 0 7px}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:9px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.mv{font-size:19px;font-weight:700;letter-spacing:-.4px}
+.ml{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* Chips */
+.chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;display:inline-block}
+.cg{background:#dcfce7;color:#166534}
+.ca{background:#fef3c7;color:#92400e}
+.cb{background:#dbeafe;color:#1e40af}
+.cr{background:#fee2e2;color:#991b1b}
+.cv{background:#ede9fe;color:#5b21b6}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--card);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--t2);flex-shrink:0;-webkit-appearance:none}
+.tab.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* Forms */
+.fg{margin-bottom:10px}
+.fl{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:4px;display:block}
+input,select,textarea{width:100%;font-size:16px;padding:10px 12px;border:1.5px solid var(--border2);border-radius:10px;background:var(--card);color:var(--t1);font-family:inherit;outline:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+textarea{resize:vertical;min-height:60px}
+
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--border2);background:var(--card);color:var(--t1);font-size:15px;font-weight:500;cursor:pointer;margin-bottom:8px;font-family:inherit;-webkit-appearance:none}
+.bp{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:600}
+.bs{background:var(--green);color:#fff;border-color:var(--green)}
+.br{background:var(--red);color:#fff;border-color:var(--red)}
+.bo{background:var(--orange);color:#fff;border-color:var(--orange)}
+.bv{background:var(--purple);color:#fff;border-color:var(--purple)}
+.bsm{padding:7px 13px;font-size:12px;width:auto;margin:0;border-radius:8px}
+
+/* Row items */
+.row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:7px;display:flex;gap:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.rw-main{flex:1;min-width:0}
+.rw-tit{font-size:14px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rw-sub{font-size:11px;color:var(--t3);margin-top:2px}
+.rw-amt{font-size:15px;font-weight:700;flex-shrink:0;text-align:right}
+.rw-acts{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.act{padding:5px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg);color:var(--t2);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit}
+.act.edit{color:var(--blue);border-color:#bfdbfe;background:#eff6ff}
+.act.del{color:var(--red);border-color:#fecaca;background:#fff5f5}
+.act.print{color:var(--green);border-color:#bbf7d0;background:#f0fdf4}
+.act.view{color:var(--purple);border-color:#ddd6fe;background:#faf5ff}
+
+/* Search */
+.srch{position:relative;flex:1}
+.srch input{padding-left:34px}
+.srch-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t4);pointer-events:none;font-size:13px}
+
+/* Modals */
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center}
+.mbg.on{display:flex}
+.sheet{background:var(--card);border-radius:20px 20px 0 0;padding:14px 16px 40px;width:100%;max-width:430px;max-height:92vh;overflow-y:auto}
+.sh{width:36px;height:4px;background:#d1d1d6;border-radius:2px;margin:0 auto 14px}
+.stit{font-size:17px;font-weight:700;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Setup modal */
+.setup-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center}
+.setup-wrap.on{display:flex}
+.setup-box{background:var(--card);border-radius:18px;padding:22px 18px;width:calc(100% - 32px);max-width:380px}
+
+/* Print modal */
+.pmwrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center}
+.pmwrap.on{display:flex}
+.pmbox{background:var(--card);border-radius:16px;padding:20px;width:calc(100% - 30px);max-width:400px;max-height:88vh;overflow-y:auto}
+
+/* Toast */
+.twrap{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:500;pointer-events:none}
+.toast{background:#1e293b;color:#fff;font-size:13px;font-weight:500;padding:9px 18px;border-radius:20px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.25);opacity:0;transform:translateY(8px);transition:all .25s;text-align:center}
+.toast.on{opacity:1;transform:translateY(0)}
+
+/* Alert items */
+.alert-item{display:flex;gap:8px;padding:10px 12px;border-radius:10px;margin-bottom:7px;font-size:12px;line-height:1.5;align-items:flex-start}
+.ai-r{background:#fee2e2;border:1px solid #fca5a5;color:#7f1d1d}
+.ai-y{background:#fef3c7;border:1px solid #fcd34d;color:#78350f}
+.ai-g{background:#dcfce7;border:1px solid #86efac;color:#14532d}
+
+/* Invoice */
+.inv{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.7}
+.inv-hdr{display:flex;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--t1)}
+.inv-logo{font-size:20px;font-weight:800}
+.inv-logo span{color:var(--blue)}
+.inv-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+.inv-tbl th{background:#f8fafc;padding:6px 8px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)}
+.inv-tbl td{padding:5px 8px;border-bottom:1px solid #f1f5f9}
+.inv-tot{margin-top:10px;border-top:2px solid var(--t1);padding-top:8px;display:flex;justify-content:flex-end}
+
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SETUP -->
+<div class="setup-wrap on" id="sw">
+  <div class="setup-box">
+    <div style="font-size:28px;text-align:center;margin-bottom:8px">&#128295;</div>
+    <div style="font-size:20px;font-weight:800;text-align:center;margin-bottom:4px">Auto H&amp;R</div>
+    <div style="font-size:13px;color:var(--t3);text-align:center;margin-bottom:18px">Control Financiero del Taller</div>
+    <div class="fg">
+      <label class="fl">Usuario</label>
+      <select id="s-user"><option value="Ali">Ali</option><option value="Yusef">Yusef</option></select>
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--t3);line-height:1.7">
+      <b style="color:var(--t2)">Sincronizacion en la nube (JSONBin.io - gratis):</b><br>
+      1. Ve a jsonbin.io y crea cuenta gratuita<br>
+      2. Crea un Bin nuevo (JSON: {})<br>
+      3. Copia el Bin ID y la Master Key
+    </div>
+    <div class="fg"><label class="fl">Bin ID</label><input type="text" id="s-bin" placeholder="6xxx..."></div>
+    <div class="fg"><label class="fl">Master Key</label><input type="password" id="s-key" placeholder="$2a$10$..."></div>
+    <button class="btn bp" onclick="doSetup()">Entrar</button>
+    <button class="btn" onclick="window.open('https://jsonbin.io','_blank')">Abrir jsonbin.io</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div><div class="tit">AUTO H&amp;R<small id="topbar-sub">Calle Sant Isidre 85, Gava</small></div></div>
+  <div class="sync-row"><div class="sdot" id="sdot" style="background:var(--t4)"></div><span class="slbl" id="slbl">--</span></div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <div class="sec on" id="sec-inicio">
+    <div class="lbl">Resumen mensual - Abril 2026</div>
+    <div class="metrics" id="dash-m"></div>
+    <div class="card" id="dash-acum"></div>
+    <div class="lbl">Alertas</div>
+    <div id="dash-alts"></div>
+    <div class="lbl">Acceso rapido</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn bp bsm" style="width:100%;padding:12px" onclick="goTab('facturas')">Nueva factura</button>
+      <button class="btn bs bsm" style="width:100%;padding:12px" onclick="goTab('proveedores')">Nuevo proveedor</button>
+      <button class="btn bv bsm" style="width:100%;padding:12px" onclick="goTab('gastos')">Nuevo gasto</button>
+      <button class="btn bo bsm" style="width:100%;padding:12px" onclick="syncNow()">Sincronizar</button>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-facturas">
+    <div class="tabs" id="ft"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div class="srch"><span class="srch-ico">&#128269;</span><input type="text" id="fsrch" placeholder="Buscar cliente, matricula..." oninput="renderFacts()"></div>
+      <button class="btn bp bsm" onclick="openFact()">+ Nueva</button>
+    </div>
+    <div id="f-sum"></div>
+    <div id="f-list"></div>
+  </div>
+
+  <div class="sec" id="sec-proveedores">
+    <div class="tabs" id="pt"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div class="srch"><span class="srch-ico">&#128269;</span><input type="text" id="psrch" placeholder="Buscar proveedor, factura..." oninput="renderProvs()"></div>
+      <button class="btn bp bsm" onclick="openProv()">+ Nueva</button>
+    </div>
+    <div id="p-sum"></div>
+    <div id="p-list"></div>
+  </div>
+
+  <div class="sec" id="sec-gastos">
+    <div class="tabs">
+      <button class="tab on" onclick="switchG('fijos',this)">Fijos</button>
+      <button class="tab" onclick="switchG('variables',this)">Variables</button>
+    </div>
+    <div id="gf-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="lbl" style="margin:0">Gastos fijos mensuales</div>
+        <button class="btn bp bsm" onclick="openGF()">+ Anadir</button>
+      </div>
+      <div class="card" style="margin-bottom:10px;padding:10px 13px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:13px;color:var(--t3)">Total mensual</span>
+          <span style="font-size:18px;font-weight:700" id="gf-tot">--</span>
+        </div>
+      </div>
+      <div id="gf-list"></div>
+    </div>
+    <div id="gv-panel" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="lbl" style="margin:0">Gastos variables operativos</div>
+        <button class="btn bp bsm" onclick="openGV()">+ Anadir</button>
+      </div>
+      <div class="tabs" id="gvt"></div>
+      <div id="gv-sum"></div>
+      <div id="gv-list"></div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-fiscal">
+    <div class="lbl">Modelo 303 - IVA Trimestral</div>
+    <div id="iva-cards"></div>
+    <div class="lbl">Modelo 130 - IRPF Pago Fraccionado</div>
+    <div id="irpf-cards"></div>
+    <div class="lbl">Modelo 347 - Operaciones con Terceros</div>
+    <div id="m347-cards"></div>
+  </div>
+
+  <div class="sec" id="sec-ajustes">
+    <div class="lbl">Cuenta</div>
+    <div class="card">
+      <div style="font-size:14px;font-weight:600" id="adj-user">--</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:3px" id="adj-sync">Ultima sync: --</div>
+    </div>
+    <div class="lbl">Datos</div>
+    <button class="btn" onclick="syncNow()">Sincronizar ahora</button>
+    <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
+    <div class="lbl">Sesion</div>
+    <button class="btn br" onclick="logout()">Cerrar sesion</button>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--t4)">Auto H&amp;R v10 - 2026</div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <button class="nb on" id="nb-inicio" onclick="goTab('inicio')"><span class="ni">&#127968;</span>Inicio</button>
+  <button class="nb" id="nb-facturas" onclick="goTab('facturas')"><span class="ni">&#129534;</span>Facturas</button>
+  <button class="nb" id="nb-proveedores" onclick="goTab('proveedores')"><span class="ni">&#128722;</span>Proveedores</button>
+  <button class="nb" id="nb-gastos" onclick="goTab('gastos')"><span class="ni">&#128176;</span>Gastos</button>
+  <button class="nb" id="nb-fiscal" onclick="goTab('fiscal')"><span class="ni">&#128203;</span>Fiscal</button>
+</div>
+
+<!-- MODAL FACTURA -->
+<div class="mbg" id="mf">
+  <div class="sheet">
+    <div class="sh"></div>
+    <div class="stit" id="mf-tit">Nueva Factura de Ingreso</div>
+    <div class="fg"><label class="fl">Mes</label><select id="mf-mes"></select></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mf-fecha"></div>
+      <div class="fg"><label class="fl">N Factura</label><input type="text" id="mf-num" placeholder="Auto"></div>
+    </div>
+    <div class="fg"><label class="fl">Cliente</label><input type="text" id="mf-cli" placeholder="Nombre cliente"></div>
+    <div class="fg"><label class="fl">Matricula</label><input type="text" id="mf-mat" placeholder="1234ABC"></div>
+    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF()"></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mf-iva" step="0.01" readonly placeholder="Auto"></div>
+      <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mf-tot" step="0.01" readonly placeholder="Auto"></div>
+    </div>
+    <div class="fg"><label class="fl">Concepto / Trabajo</label><textarea id="mf-conc" placeholder="Descripcion del trabajo..."></textarea></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Forma de Pago</label>
+        <select id="mf-pago"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option><option>Otro</option></select>
+      </div>
+      <div class="fg"><label class="fl">Estado</label>
+        <select id="mf-est"><option value="Cobrado">Cobrado</option><option value="Pendiente">Pendiente</option></select>
+      </div>
+    </div>
+    <input type="hidden" id="mf-id">
+    <button class="btn bp" onclick="saveFact()">Guardar Factura</button>
+    <button class="btn" onclick="closeFact()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PROVEEDOR -->
+<div class="mbg" id="mp">
+  <div class="sheet">
+    <div class="sh"></div>
+    <div class="stit" id="mp-tit">Nueva Compra Proveedor</div>
+    <div class="fg"><label class="fl">Mes</label><select id="mp-mes"></select></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mp-fecha"></div>
+      <div class="fg"><label class="fl">N Factura Prov.</label><input type="text" id="mp-num" placeholder="FAB26..."></div>
+    </div>
+    <div class="fg"><label class="fl">Proveedor</label>
+      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner...">
+      <datalist id="prov-dl"><option value="Adbosch"><option value="Berner"><option value="Otro"></datalist>
+    </div>
+    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mp-base" step="0.01" placeholder="0.00" oninput="calcP()"></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mp-iva" step="0.01" readonly placeholder="Auto"></div>
+      <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mp-tot" step="0.01" readonly placeholder="Auto"></div>
+    </div>
+    <div class="fg"><label class="fl">Concepto</label><textarea id="mp-conc" placeholder="Descripcion de la compra..."></textarea></div>
+    <div class="fg"><label class="fl">Estado</label>
+      <select id="mp-est"><option value="Pagado">Pagado</option><option value="Pendiente">Pendiente</option></select>
+    </div>
+    <input type="hidden" id="mp-id">
+    <button class="btn bp" onclick="saveProv()">Guardar</button>
+    <button class="btn" onclick="closeProv()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL GASTO FIJO -->
+<div class="mbg" id="mgf">
+  <div class="sheet">
+    <div class="sh"></div>
+    <div class="stit" id="mgf-tit">Gasto Fijo</div>
+    <div class="fg"><label class="fl">Concepto</label><input type="text" id="gf-conc" placeholder="Alquiler, luz..."></div>
+    <div class="fg"><label class="fl">Periodicidad</label>
+      <select id="gf-per"><option>Mensual</option><option>Bimestral</option><option>Trimestral</option><option>Anual</option></select>
+    </div>
+    <div class="fg"><label class="fl">Importe (EUR)</label><input type="number" id="gf-imp" step="0.01" min="0" placeholder="0.00"></div>
+    <div class="fg"><label class="fl">Notas</label><input type="text" id="gf-nota" placeholder="Opcional..."></div>
+    <input type="hidden" id="gf-id">
+    <button class="btn bp" onclick="saveGF()">Guardar</button>
+    <button class="btn" onclick="closeGF()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL GASTO VARIABLE -->
+<div class="mbg" id="mgv">
+  <div class="sheet">
+    <div class="sh"></div>
+    <div class="stit" id="mgv-tit">Gasto Variable</div>
+    <div class="fg"><label class="fl">Mes</label><select id="gv-mes"></select></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Fecha</label><input type="date" id="gv-fecha"></div>
+      <div class="fg"><label class="fl">N Factura</label><input type="text" id="gv-num" placeholder="Opcional"></div>
+    </div>
+    <div class="fg"><label class="fl">Proveedor / Organismo</label><input type="text" id="gv-prov" placeholder="Endesa, TGSS..."></div>
+    <div class="fg"><label class="fl">Concepto</label><input type="text" id="gv-conc" placeholder="Factura electrica, nomina..."></div>
+    <div class="fg"><label class="fl">Importe (EUR)</label><input type="number" id="gv-imp" step="0.01" min="0" placeholder="0.00"></div>
+    <div class="fg"><label class="fl">Forma de Pago</label>
+      <select id="gv-pago"><option>Transferencia</option><option>Efectivo</option><option>Domiciliacion</option></select>
+    </div>
+    <input type="hidden" id="gv-id">
+    <button class="btn bp" onclick="saveGV()">Guardar</button>
+    <button class="btn" onclick="closeGV()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PRINT/VIEW -->
+<div class="pmwrap" id="pmw">
+  <div class="pmbox">
+    <div class="stit no-print" id="pm-tit">Vista Previa</div>
+    <div id="pm-body"></div>
+    <div style="display:flex;gap:8px;margin-top:14px" class="no-print">
+      <button class="btn bs" style="flex:1" onclick="doPrint()">Imprimir / PDF</button>
+      <button class="btn" style="flex:1" onclick="closePM()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="twrap"><div class="toast" id="toast"></div></div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+var MESES_I = ['Sep-25','Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
+var MESES_C = ['Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
+var ML = {'Sep-25':'Septiembre 2025','Oct-25':'Octubre 2025','Nov-25':'Noviembre 2025','Dic-25':'Diciembre 2025','Ene-26':'Enero 2026','Feb-26':'Febrero 2026','Mar-26':'Marzo 2026','Abr-26':'Abril 2026','May-26':'Mayo 2026','Jun-26':'Junio 2026','Jul-26':'Julio 2026','Ago-26':'Agosto 2026','Sep-26':'Septiembre 2026','Oct-26':'Octubre 2026','Nov-26':'Noviembre 2026','Dic-26':'Diciembre 2026'};
+var JBIN = 'https://api.jsonbin.io/v3/b/';
+
+// ============================================================
+// STATE
+// ============================================================
+var BIN = '', KEY = '', USER = '', lastSync = null;
+var curFT = 'Abr-26', curPT = 'Abr-26', curGVT = 'Abr-26';
+
+var SD = {
+  facturas: [
+    // SEP-25 (1 factura)
+    {id:'f001',mes:'Sep-25',fecha:'2025-09-27',num:'270925027',cliente:'Particular',matricula:'',base:155,iva:32.55,total:187.55,concepto:'Reparacion',pago:'Transferencia',estado:'Cobrado'},
+    // OCT-25 (15 facturas)
+    {id:'f002',mes:'Oct-25',fecha:'2025-10-01',num:'11025028',cliente:'Particular',matricula:'',base:145.5,iva:30.56,total:176.06,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f003',mes:'Oct-25',fecha:'2025-10-01',num:'11025029',cliente:'Cristian',matricula:'Ford Transit',base:115.71,iva:24.30,total:140.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f004',mes:'Oct-25',fecha:'2025-10-03',num:'31025030',cliente:'Rafael Gomez',matricula:'Ford Neglo',base:148.77,iva:31.24,total:180.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f005',mes:'Oct-25',fecha:'2025-10-03',num:'',cliente:'Miguel Martinez',matricula:'',base:204.96,iva:43.04,total:248.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f006',mes:'Oct-25',fecha:'2025-10-03',num:'',cliente:'Francisco',matricula:'Peugeot',base:388.43,iva:81.57,total:470.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f007',mes:'Oct-25',fecha:'2025-10-06',num:'61025031',cliente:'Nelson Lopez',matricula:'',base:278.31,iva:58.45,total:336.76,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f008',mes:'Oct-25',fecha:'2025-10-06',num:'',cliente:'Kugar',matricula:'',base:24.8,iva:5.21,total:30.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f009',mes:'Oct-25',fecha:'2025-10-13',num:'',cliente:'Nelson Lopez',matricula:'',base:238.6,iva:50.11,total:288.71,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f010',mes:'Oct-25',fecha:'2025-10-11',num:'111025032',cliente:'Carlos Rondon',matricula:'',base:66.12,iva:13.89,total:80.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f011',mes:'Oct-25',fecha:'2025-10-12',num:'121025033',cliente:'Nelson Lopez',matricula:'',base:157.55,iva:33.09,total:190.64,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f012',mes:'Oct-25',fecha:'2025-10-14',num:'',cliente:'Peugeot',matricula:'',base:350.42,iva:73.59,total:424.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f013',mes:'Oct-25',fecha:'2025-10-14',num:'141025034',cliente:'Particular',matricula:'',base:368.29,iva:77.34,total:445.63,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f014',mes:'Oct-25',fecha:'2025-10-20',num:'201025035',cliente:'Particular',matricula:'',base:214.88,iva:45.12,total:260.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f015',mes:'Oct-25',fecha:'2025-10-21',num:'211025036',cliente:'Particular',matricula:'',base:661.16,iva:138.84,total:800.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f016',mes:'Oct-25',fecha:'2025-10-29',num:'291025037',cliente:'Particular',matricula:'',base:604.57,iva:126.96,total:731.53,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    // NOV-25 (14 facturas)
+    {id:'f017',mes:'Nov-25',fecha:'2025-11-01',num:'',cliente:'Particular',matricula:'',base:132.24,iva:27.77,total:160.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f018',mes:'Nov-25',fecha:'2025-11-01',num:'',cliente:'Particular',matricula:'',base:702.48,iva:147.52,total:850.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f019',mes:'Nov-25',fecha:'2025-11-03',num:'',cliente:'Particular',matricula:'',base:238.6,iva:50.11,total:288.71,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f020',mes:'Nov-25',fecha:'2025-11-03',num:'',cliente:'Particular',matricula:'',base:413.23,iva:86.78,total:500.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f021',mes:'Nov-25',fecha:'2025-11-16',num:'',cliente:'Particular',matricula:'',base:23,iva:4.83,total:27.83,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f022',mes:'Nov-25',fecha:'2025-11-16',num:'',cliente:'Particular',matricula:'',base:28,iva:5.88,total:33.88,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f023',mes:'Nov-25',fecha:'2025-11-22',num:'',cliente:'Particular',matricula:'',base:16.53,iva:3.47,total:20.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f024',mes:'Nov-25',fecha:'2025-11-22',num:'',cliente:'Particular',matricula:'',base:413.23,iva:86.78,total:500.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f025',mes:'Nov-25',fecha:'2025-11-22',num:'',cliente:'Particular',matricula:'',base:330.58,iva:69.42,total:400.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f026',mes:'Nov-25',fecha:'2025-11-24',num:'',cliente:'Particular',matricula:'',base:369.7,iva:77.64,total:447.34,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f027',mes:'Nov-25',fecha:'2025-11-27',num:'',cliente:'Particular',matricula:'',base:462.81,iva:97.19,total:560.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f028',mes:'Nov-25',fecha:'2025-11-27',num:'',cliente:'Particular',matricula:'',base:135.64,iva:28.48,total:164.12,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f029',mes:'Nov-25',fecha:'2025-11-27',num:'',cliente:'Particular',matricula:'',base:186.78,iva:39.22,total:226.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f030',mes:'Nov-25',fecha:'2025-11-01',num:'',cliente:'Particular',matricula:'',base:132,iva:27.72,total:159.72,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    // DIC-25 (8 facturas)
+    {id:'f031',mes:'Dic-25',fecha:'2025-12-01',num:'',cliente:'Particular',matricula:'',base:53.72,iva:11.28,total:65.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f032',mes:'Dic-25',fecha:'2025-12-05',num:'',cliente:'Miguel Garcia',matricula:'',base:206.62,iva:43.39,total:250.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f033',mes:'Dic-25',fecha:'2025-12-03',num:'',cliente:'Particular',matricula:'',base:95.58,iva:20.07,total:115.65,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f034',mes:'Dic-25',fecha:'2025-12-06',num:'',cliente:'Particular',matricula:'',base:619.84,iva:130.17,total:750.01,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f035',mes:'Dic-25',fecha:'2025-12-08',num:'',cliente:'Particular',matricula:'',base:599.96,iva:125.99,total:725.95,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f036',mes:'Dic-25',fecha:'2025-12-15',num:'',cliente:'Javier Sevilla',matricula:'',base:330.58,iva:69.42,total:400.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f037',mes:'Dic-25',fecha:'2025-12-18',num:'',cliente:'Casteluche',matricula:'',base:368.29,iva:77.34,total:445.63,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f038',mes:'Dic-25',fecha:'2025-12-22',num:'',cliente:'Particular',matricula:'',base:1465.29,iva:307.71,total:1773.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    // ENE-26 (13 facturas reales del Excel - COMPLETO)
+    {id:'f039',mes:'Ene-26',fecha:'2026-01-30',num:'300126046',cliente:'Onus Express',matricula:'4432JSM',base:247.93,iva:52.07,total:300.00,concepto:'Reparacion pedalera embrague, bombilla espejo y matricula',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f040',mes:'Ene-26',fecha:'2026-01-15',num:'',cliente:'Cristian Acosta',matricula:'',base:165.29,iva:34.71,total:200.00,concepto:'Filtro de particulas instalacion',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f041',mes:'Ene-26',fecha:'2026-01-15',num:'',cliente:'TPV',matricula:'',base:132.23,iva:27.77,total:160.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f042',mes:'Ene-26',fecha:'2026-01-14',num:'',cliente:'Luis Casteluche',matricula:'',base:930.58,iva:195.42,total:1126.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f043',mes:'Ene-26',fecha:'2026-01-13',num:'',cliente:'TPV',matricula:'',base:123.97,iva:26.03,total:150.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f044',mes:'Ene-26',fecha:'2026-01-10',num:'',cliente:'Miguel Garcia',matricula:'',base:49.59,iva:10.41,total:60.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f045',mes:'Ene-26',fecha:'2026-01-07',num:'',cliente:'Nelson Lopez',matricula:'',base:462.81,iva:97.19,total:560.00,concepto:'Reparacion',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f046',mes:'Ene-26',fecha:'2026-01-01',num:'',cliente:'Julio Brea',matricula:'',base:181.82,iva:38.18,total:220.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f047',mes:'Ene-26',fecha:'2026-01-01',num:'',cliente:'Particular TPV',matricula:'',base:125,iva:26.25,total:151.25,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f048',mes:'Ene-26',fecha:'2026-01-25',num:'',cliente:'Nelson Lopez',matricula:'',base:132.23,iva:27.77,total:160.00,concepto:'',pago:'Transferencia',estado:'Cobrado'},
+    // FEB-26 (6 facturas)
+    {id:'f049',mes:'Feb-26',fecha:'2026-02-03',num:'30226047',cliente:'Onus Express',matricula:'4432JSM',base:66.12,iva:13.89,total:80.01,concepto:'Sustitucion cerradura y fijacion aislamiento puerta trasera',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f050',mes:'Feb-26',fecha:'2026-02-03',num:'30226048',cliente:'Onus Express',matricula:'7384FYP',base:232.23,iva:48.77,total:281.00,concepto:'Cambio aceite/Filtro, pastillas frenos delanteros',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f051',mes:'Feb-26',fecha:'2026-02-09',num:'90226049',cliente:'Onus Express',matricula:'4175JFZ',base:330.58,iva:69.42,total:400.00,concepto:'Scanner / reemplazo turbo / limpieza filtro particulas',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f052',mes:'Feb-26',fecha:'2026-02-14',num:'140226050',cliente:'Onus Express',matricula:'4175JFZ',base:123.97,iva:26.03,total:150.00,concepto:'Cambio aceite/filtro y filtro aire motor',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f053',mes:'Feb-26',fecha:'2026-02-23',num:'230226051',cliente:'Onus Express',matricula:'1125GLX',base:630,iva:132.30,total:762.30,concepto:'Rodamientos, pastillas frenos del, cable selector, buje barra estabilizadora',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f054',mes:'Feb-26',fecha:'2026-02-11',num:'',cliente:'Nelson Lopez',matricula:'',base:961.16,iva:201.84,total:1163.00,concepto:'Reparacion vehiculo',pago:'Transferencia',estado:'Cobrado'},
+    // MAR-26 (9 facturas reales del Excel - COMPLETO)
+    {id:'f055',mes:'Mar-26',fecha:'2026-03-20',num:'',cliente:'Alejandro Meneses',matricula:'',base:165.29,iva:34.71,total:200.00,concepto:'Reparacion',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f056',mes:'Mar-26',fecha:'2026-03-17',num:'',cliente:'Javier Sevilla',matricula:'',base:66.12,iva:13.88,total:80.00,concepto:'Reparacion',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f057',mes:'Mar-26',fecha:'2026-03-17',num:'',cliente:'TPV',matricula:'',base:82.65,iva:17.36,total:100.01,concepto:'Reparacion',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f058',mes:'Mar-26',fecha:'2026-03-22',num:'',cliente:'Nelson Lopez',matricula:'',base:876.03,iva:183.97,total:1060.00,concepto:'Reparacion vehiculo',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f059',mes:'Mar-26',fecha:'2026-03-22',num:'110326052',cliente:'Onus Express',matricula:'4611JFM',base:371.9,iva:78.10,total:450.00,concepto:'Focus cambio de caja de cambios',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f060',mes:'Mar-26',fecha:'2026-03-24',num:'130326053',cliente:'Rosa Beltran',matricula:'6160FXZ',base:90,iva:18.90,total:108.90,concepto:'Bateria',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f061',mes:'Mar-26',fecha:'2026-03-27',num:'270326054',cliente:'Onus Express',matricula:'7384FYP',base:495.87,iva:104.13,total:600.00,concepto:'Reparacion freno trasero, correa distribucion',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f062',mes:'Mar-26',fecha:'2026-03-30',num:'300326055',cliente:'Onus Express',matricula:'9840KPD',base:247.93,iva:52.07,total:300.00,concepto:'Cambio de aceite y filtros + Reparacion freno de mano',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f063',mes:'Mar-26',fecha:'2026-03-27',num:'',cliente:'Carlos Manuel',matricula:'',base:206.61,iva:43.39,total:250.00,concepto:'Cambio de correa de distribucion',pago:'Transferencia',estado:'Cobrado'},
+    // ABR-26 (4 facturas reales del Excel - COMPLETO)
+    {id:'f064',mes:'Abr-26',fecha:'2026-04-19',num:'',cliente:'Carlos Silva',matricula:'',base:330.58,iva:69.42,total:400.00,concepto:'Cambio rodamientos Fiat Ducato',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f065',mes:'Abr-26',fecha:'2026-04-29',num:'',cliente:'Victor Goncalves',matricula:'8702HLS',base:826.45,iva:173.55,total:1000.00,concepto:'Reparacion Fiat Fiorino',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f066',mes:'Abr-26',fecha:'2026-04-29',num:'',cliente:'Nelson Lopez',matricula:'5029KYR',base:586.78,iva:123.22,total:710.00,concepto:'Trompa (pendiente una parte de pago 400 euros)',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f067',mes:'Abr-26',fecha:'2026-04-19',num:'70426056',cliente:'Onus Express',matricula:'0899KRC',base:165.29,iva:34.71,total:200.00,concepto:'Fiat Ducato Revision A/C, estanqueidad circuito, cambio juntas, carga aceite y refrigerante',pago:'Transferencia',estado:'Cobrado'}
+  ],
+  proveedores: [
+    // SEP-25 (2 - NUEVOS, no estaban en app)
+    {id:'p000a',mes:'Sep-25',fecha:'2025-09-20',num:'FAB25049098',proveedor:'Adbosch',base:726.16,iva:152.49,total:878.65,concepto:'Piezas 10 nov 25',estado:'Pagado'},
+    {id:'p000b',mes:'Sep-25',fecha:'2025-09-13',num:'1166797207',proveedor:'Berner',base:477.54,iva:100.28,total:577.82,concepto:'Piezas 22 nov',estado:'Pagado'},
+    // OCT-25 (2)
+    {id:'p001',mes:'Oct-25',fecha:'2025-10-21',num:'1166836104',proveedor:'Berner',base:103.21,iva:21.67,total:124.88,concepto:'Piezas 31 Oct 25',estado:'Pagado'},
+    {id:'p002',mes:'Oct-25',fecha:'2025-10-15',num:'FAB25051208',proveedor:'Adbosch',base:483.79,iva:101.60,total:585.39,concepto:'Piezas Oct 25',estado:'Pagado'},
+    // NOV-25 (3)
+    {id:'p003',mes:'Nov-25',fecha:'2025-11-12',num:'FAB25056935',proveedor:'Adbosch',base:1139.19,iva:239.23,total:1378.42,concepto:'Piezas 10 enero',estado:'Pagado'},
+    {id:'p004',mes:'Nov-25',fecha:'2025-11-15',num:'1166854196',proveedor:'Berner',base:261.33,iva:54.88,total:316.21,concepto:'Piezas 18 dic 25',estado:'Pagado'},
+    {id:'p005',mes:'Nov-25',fecha:'2025-11-27',num:'FAB25060461',proveedor:'Adbosch',base:448.41,iva:94.17,total:542.58,concepto:'Repuestos 10 enero',estado:'Pagado'},
+    // DIC-25 (2)
+    {id:'p006',mes:'Dic-25',fecha:'2025-12-12',num:'FAB25062570',proveedor:'Adbosch',base:226.45,iva:47.55,total:274.00,concepto:'Pagado en enero',estado:'Pagado'},
+    {id:'p007',mes:'Dic-25',fecha:'2025-12-28',num:'FAB25065818',proveedor:'Adbosch',base:2836.85,iva:595.74,total:3432.59,concepto:'Pagado en enero',estado:'Pagado'},
+    // ENE-26 (2)
+    {id:'p008',mes:'Ene-26',fecha:'2026-01-07',num:'FAB26001885',proveedor:'Adbosch',base:642.88,iva:135.00,total:777.88,concepto:'Filtros y piezas 10 marzo',estado:'Pagado'},
+    {id:'p009',mes:'Ene-26',fecha:'2026-01-23',num:'FAB26005418',proveedor:'Adbosch',base:438.56,iva:92.10,total:530.66,concepto:'Piezas 10 marzo',estado:'Pagado'},
+    // FEB-26 (3)
+    {id:'p010',mes:'Feb-26',fecha:'2026-02-08',num:'FAB26007565',proveedor:'Adbosch',base:855.37,iva:179.63,total:1035.00,concepto:'Filtros y piezas 10 abril',estado:'Pagado'},
+    {id:'p011',mes:'Feb-26',fecha:'2026-02-21',num:'FAB26011002',proveedor:'Adbosch',base:-196.66,iva:-41.30,total:-237.96,concepto:'Fac. rectificativa 10 abril',estado:'Pagado'},
+    {id:'p012',mes:'Feb-26',fecha:'2026-02-13',num:'1166922531',proveedor:'Berner',base:280.27,iva:58.86,total:339.13,concepto:'Cobran 12/03/2026',estado:'Pagado'},
+    // MAR-26 (3)
+    {id:'p013',mes:'Mar-26',fecha:'2026-03-26',num:'FAB26013151',proveedor:'Adbosch',base:910.36,iva:191.18,total:1101.54,concepto:'PENDIENTE 10 MAY',estado:'Pendiente'},
+    {id:'p014',mes:'Mar-26',fecha:'2026-04-12',num:'FAB26016695',proveedor:'Adbosch',base:444.83,iva:93.41,total:538.24,concepto:'Recambios pago 10 mayo',estado:'Pendiente'},
+    {id:'p015',mes:'Mar-26',fecha:'2026-03-13',num:'1166943135',proveedor:'Berner',base:146.64,iva:30.79,total:177.43,concepto:'Insumos limpieza 01 Abril',estado:'Pagado'},
+    // ABR-26 (2)
+    {id:'p016',mes:'Abr-26',fecha:'2026-04-17',num:'FAB26018740',proveedor:'Adbosch',base:990.54,iva:208.01,total:1198.55,concepto:'Repuestos cobran 10 junio',estado:'Pendiente'},
+    {id:'p017',mes:'Abr-26',fecha:'2026-04-22',num:'1166989048',proveedor:'Berner',base:280.73,iva:58.95,total:339.68,concepto:'Limp. Freno/grapas - 20 mayo',estado:'Pendiente'}
+  ],
+  gastosFijos: [
+    {id:'gf01',concepto:'Alquiler Local',period:'Mensual',importe:903.69,importe_mes:903.69,notas:'C/ Sant Isidre 85, Gava'},
+    {id:'gf02',concepto:'Seg. Social Ali',period:'Mensual',importe:88.56,importe_mes:88.56,notas:'Cuota minima autonomo'},
+    {id:'gf03',concepto:'Seg. Social Yusef',period:'Mensual',importe:88.56,importe_mes:88.56,notas:'Cuota minima autonomo'},
+    {id:'gf04',concepto:'IRPF Modelo 130',period:'Trimestral',importe:0,importe_mes:0,notas:'Pago fraccionado Hacienda'},
+    {id:'gf05',concepto:'Prestamo BBVA',period:'Mensual',importe:285.9,importe_mes:285.9,notas:'Prestamo taller'},
+    {id:'gf06',concepto:'Aguas Barcelona',period:'Bimestral',importe:86.45,importe_mes:43.23,notas:'Promedio real'},
+    {id:'gf07',concepto:'Orange Internet+Tel',period:'Mensual',importe:15,importe_mes:15,notas:''},
+    {id:'gf08',concepto:'Endesa Luz',period:'Mensual',importe:131.59,importe_mes:131.59,notas:'Promedio Ene-Feb'},
+    {id:'gf09',concepto:'Asesoria Zaballos',period:'Mensual',importe:78.84,importe_mes:78.84,notas:''},
+    {id:'gf10',concepto:'Gestoria Asemar',period:'Mensual',importe:62.38,importe_mes:62.38,notas:''},
+    {id:'gf11',concepto:'Seguro Taller',period:'Mensual',importe:0,importe_mes:0,notas:'Pendiente rellenar'}
+  ],
+  gastosVariables: [
+    {id:'gv01',mes:'Ene-26',fecha:'2026-01-01',num:'',prov:'Endesa Luz',concepto:'Factura electrica Enero',importe:128.52,pago:'Transferencia'},
+    {id:'gv02',mes:'Ene-26',fecha:'2026-01-01',num:'26-76',prov:'Asemar',concepto:'Gestoria Enero 2026',importe:62.38,pago:'Transferencia'},
+    {id:'gv03',mes:'Ene-26',fecha:'2026-01-23',num:'',prov:'Zaballos',concepto:'Gestoria Enero 2026',importe:78.84,pago:'Transferencia'},
+    {id:'gv04',mes:'Feb-26',fecha:'2026-02-01',num:'',prov:'Endesa Luz',concepto:'Factura electrica Febrero',importe:134.65,pago:'Transferencia'},
+    {id:'gv05',mes:'Feb-26',fecha:'2026-02-01',num:'',prov:'Aguas Barcelona',concepto:'Suministro agua bimestral',importe:84.67,pago:'Transferencia'},
+    {id:'gv06',mes:'Feb-26',fecha:'2026-02-01',num:'26-285',prov:'Asemar',concepto:'Gestoria Febrero 2026',importe:62.38,pago:'Transferencia'},
+    {id:'gv07',mes:'Feb-26',fecha:'2026-02-01',num:'230',prov:'Zaballos',concepto:'Asesoria Febrero 2026',importe:78.84,pago:'Transferencia'},
+    {id:'gv08',mes:'Feb-26',fecha:'2026-02-01',num:'',prov:'Nomina Yusef',concepto:'Diferencia nomina Febrero',importe:56.73,pago:'Transferencia'},
+    {id:'gv09',mes:'Feb-26',fecha:'2026-02-01',num:'',prov:'TGSS',concepto:'Cotizacion contrato laboral',importe:896.97,pago:'Transferencia'},
+    {id:'gv10',mes:'Mar-26',fecha:'2026-03-22',num:'26-285',prov:'Asemar',concepto:'Gestoria Marzo 2026',importe:62.38,pago:'Transferencia'},
+    {id:'gv11',mes:'Mar-26',fecha:'2026-03-22',num:'',prov:'Endesa Luz',concepto:'Factura electrica Marzo',importe:280.6,pago:'Transferencia'},
+    {id:'gv12',mes:'Mar-26',fecha:'2026-03-22',num:'',prov:'Zaballos',concepto:'Gestoria Marzo 2026',importe:78.84,pago:'Transferencia'},
+    {id:'gv13',mes:'Dic-25',fecha:'2025-12-01',num:'',prov:'Aguas Barcelona',concepto:'Suministro agua bimestral',importe:88.23,pago:'Transferencia'},
+    {id:'gv14',mes:'Dic-25',fecha:'2025-12-01',num:'25-2641',prov:'Asemar',concepto:'Gestoria Diciembre 2025',importe:60.5,pago:'Transferencia'},
+    {id:'gv15',mes:'Dic-25',fecha:'2025-12-01',num:'2100',prov:'Zaballos',concepto:'Asesoria Nov-Dic 2025',importe:153.23,pago:'Transferencia'}
+  ],
+  numNext: 68
+};
+
+// ============================================================
+// UTILS
+// ============================================================
+function g(id){ return document.getElementById(id); }
+function eur(n){ var v = Number(n)||0; return (v<0?'-':'')+Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,'.') + ' EUR'; }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, dur){
+  var t = g('toast'); t.textContent = msg; t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); }, dur||2500);
+}
+
+function setSyncStatus(s){
+  var d=g('sdot'), l=g('slbl');
+  if(s==='ok'){ d.style.background='var(--green)'; d.className='sdot'; l.textContent='Sincronizado'; }
+  else if(s==='sy'){ d.style.background='var(--orange)'; d.className='sdot sy'; l.textContent='Sincronizando...'; }
+  else{ d.style.background='var(--red)'; d.className='sdot'; l.textContent='Sin conexion'; }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goTab(name){
+  document.querySelectorAll('.sec').forEach(function(s){ s.classList.remove('on'); });
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('on'); });
+  var s = g('sec-'+name); if(s) s.classList.add('on');
+  var b = g('nb-'+name); if(b) b.classList.add('on');
+  if(name==='inicio') renderDash();
+  if(name==='facturas') renderFacts();
+  if(name==='proveedores') renderProvs();
+  if(name==='gastos') renderGastos();
+  if(name==='fiscal') renderFiscal();
+}
+
+// ============================================================
+// CLOUD SYNC
+// ============================================================
+async function cloudGet(){
+  if(!BIN||!KEY) return;
+  setSyncStatus('sy');
+  try{
+    var r = await fetch(JBIN+BIN+'/latest',{headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
+    if(!r.ok) throw new Error();
+    var d = await r.json();
+    if(d && d.facturas){
+      if(d.facturas && d.facturas.length) SD.facturas = d.facturas;
+      if(d.proveedores && d.proveedores.length) SD.proveedores = d.proveedores;
+      if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos = d.gastosFijos;
+      if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables = d.gastosVariables;
+      if(d.numNext) SD.numNext = d.numNext;
+      if(d.user) USER = d.user;
+    }
+    lastSync = new Date();
+    setSyncStatus('ok');
+    renderAll();
+  }catch(e){ setSyncStatus('err'); }
+}
+
+async function cloudPut(){
+  if(!BIN||!KEY) return;
+  setSyncStatus('sy');
+  try{
+    await fetch(JBIN+BIN,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
+      body:JSON.stringify(Object.assign({}, SD, {user: USER, lastSyncUser: USER, lastSyncTime: new Date().toISOString()}))
+    });
+    lastSync = new Date();
+    setSyncStatus('ok');
+  }catch(e){ setSyncStatus('err'); }
+}
+
+async function syncNow(){ await cloudGet(); toast('Datos actualizados'); }
+
+// ============================================================
+// SETUP & LOGIN
+// ============================================================
+function loadCfg(){
+  try{
+    var p = JSON.parse(localStorage.getItem('autohr_cfg')||'null');
+    if(p && p.binId){
+      BIN=p.binId; KEY=p.apiKey||''; USER=p.user||'Ali';
+      g('sw').classList.remove('on');
+      startApp();
+    }
+  }catch(e){}
+}
+
+async function doSetup(){
+  USER = g('s-user').value;
+  var bin = (g('s-bin').value||'').trim();
+  var key = (g('s-key').value||'').trim();
+  if(bin && key){
+    BIN=bin; KEY=key;
+    localStorage.setItem('autohr_cfg', JSON.stringify({binId:bin,apiKey:key,user:USER}));
+  }
+  g('sw').classList.remove('on');
+  startApp();
+}
+
+function startApp(){
+  g('adj-user').textContent = USER;
+  var sub = g('topbar-sub');
+  if(sub) sub.textContent = 'Usuario: ' + USER;
+  initTabs();
+  cloudGet().then(function(){
+    renderAll();
+    updateSyncLabel();
+  });
+  setInterval(function(){
+    if(!document.hidden && BIN){ cloudGet().then(function(){ updateSyncLabel(); }); }
+  }, 60000);
+}
+
+function logout(){
+  if(!confirm('Cerrar sesion?')) return;
+  localStorage.removeItem('autohr_cfg');
+  location.reload();
+}
+
+function updateSyncLabel(){
+  if(lastSync){
+    var h = lastSync.getHours().toString().padStart(2,'0');
+    var m = lastSync.getMinutes().toString().padStart(2,'0');
+    var d = lastSync.getDate().toString().padStart(2,'0');
+    var mo = (lastSync.getMonth()+1).toString().padStart(2,'0');
+    g('adj-sync').textContent = 'Ultima sync: '+d+'/'+mo+' '+h+':'+m+' ('+USER+')';
+  }
+}
+
+function renderAll(){
+  var active = document.querySelector('.sec.on');
+  if(active){
+    var id = active.id.replace('sec-','');
+    if(id==='inicio') renderDash();
+    else if(id==='facturas') renderFacts();
+    else if(id==='proveedores') renderProvs();
+    else if(id==='gastos') renderGastos();
+    else if(id==='fiscal') renderFiscal();
+  }
+}
+
+// ============================================================
+// INIT TABS
+// ============================================================
+function initTabs(){
+  // Factura tabs
+  var ftEl = g('ft');
+  ftEl.innerHTML = '';
+  MESES_I.forEach(function(m){
+    var b = document.createElement('button');
+    b.className = 'tab' + (m===curFT?' on':'');
+    b.textContent = m;
+    b.onclick = function(){ setFT(m); };
+    ftEl.appendChild(b);
+  });
+  // Proveedor tabs
+  var ptEl = g('pt');
+  ptEl.innerHTML = '';
+  MESES_C.forEach(function(m){
+    var b = document.createElement('button');
+    b.className = 'tab' + (m===curPT?' on':'');
+    b.textContent = m;
+    b.onclick = function(){ setPT(m); };
+    ptEl.appendChild(b);
+  });
+  // GV tabs
+  var gvtEl = g('gvt');
+  gvtEl.innerHTML = '';
+  MESES_I.forEach(function(m){
+    var b = document.createElement('button');
+    b.className = 'tab' + (m===curGVT?' on':'');
+    b.textContent = m;
+    b.onclick = function(){ setGVT(m); };
+    gvtEl.appendChild(b);
+  });
+  // Modal selects
+  var meses_all = MESES_I;
+  ['mf-mes','mp-mes','gv-mes'].forEach(function(id){
+    var s = g(id); if(!s) return;
+    var arr = (id==='mp-mes') ? MESES_C : meses_all;
+    s.innerHTML = arr.map(function(m){ return '<option value="'+m+'">'+(ML[m]||m)+'</option>'; }).join('');
+  });
+}
+
+function setFT(m){ curFT=m; g('fsrch').value=''; initTabs(); renderFacts(); }
+function setPT(m){ curPT=m; g('psrch').value=''; initTabs(); renderProvs(); }
+function setGVT(m){ curGVT=m; initTabs(); renderGastos(); }
+
+// ============================================================
+// HTML BUILDERS (no template literals - plain string concatenation)
+// ============================================================
+function mkMetric(val, lbl, color){
+  return '<div class="metric"><div class="mv" style="color:'+color+'">'+escH(val)+'</div><div class="ml">'+escH(lbl)+'</div></div>';
+}
+
+function mkChip(txt, cls){
+  return '<span class="chip '+cls+'">'+escH(txt)+'</span>';
+}
+
+function mkRow(mainHTML, amtHTML){
+  return '<div class="row"><div class="rw-main">'+mainHTML+'</div><div style="text-align:right;flex-shrink:0">'+amtHTML+'</div></div>';
+}
+
+function mkAct(label, cls, onclick){
+  return '<button class="act '+cls+'" onclick="'+onclick+'">'+label+'</button>';
+}
+
+function mkAlert(txt, type){
+  return '<div class="alert-item ai-'+type+'">'+txt+'</div>';
+}
+
+function mkSumCard(leftTxt, rightTxt, chips){
+  return '<div class="card" style="padding:10px 13px;margin-bottom:10px">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
+    '<span style="font-size:12px;color:var(--t3)">'+escH(leftTxt)+'</span>'+
+    '<span style="font-weight:700">'+rightTxt+'</span></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+chips+'</div></div>';
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDash(){
+  var mAct = 'Abr-26';
+  var fM = SD.facturas.filter(function(f){ return f.mes===mAct; });
+  var pM = SD.proveedores.filter(function(p){ return p.mes===mAct; });
+  var gvM = SD.gastosVariables.filter(function(g){ return g.mes===mAct; });
+  var gfTot = SD.gastosFijos.reduce(function(a,x){ return a+Number(x.importe_mes||0); },0);
+  var ing = fM.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var comp = pM.reduce(function(a,p){ return a+Number(p.base||0); },0);
+  var gvT = gvM.reduce(function(a,x){ return a+Number(x.importe||0); },0);
+  var res = ing - gfTot - comp - gvT;
+
+  var meses26 = ['Ene-26','Feb-26','Mar-26','Abr-26'];
+  var ing26 = meses26.reduce(function(a,m){
+    return a + SD.facturas.filter(function(f){ return f.mes===m && f.estado==='Cobrado'; }).reduce(function(s,f){ return s+Number(f.base||0); },0);
+  },0);
+  var comp26 = meses26.reduce(function(a,m){
+    return a + SD.proveedores.filter(function(p){ return p.mes===m; }).reduce(function(s,p){ return s+Number(p.base||0); },0);
+  },0);
+
+  var cIng = ing>=0 ? 'var(--green)' : 'var(--red)';
+  var cRes = res>=0 ? 'var(--green)' : 'var(--red)';
+  var pend = SD.facturas.filter(function(f){ return f.estado==='Pendiente'; }).length;
+
+  g('dash-m').innerHTML =
+    mkMetric(eur(ing), 'Ingresos Abril 2026', cIng) +
+    mkMetric(eur(gfTot+comp+gvT), 'Gastos totales Abril', 'var(--orange)') +
+    mkMetric(eur(res), 'Resultado Abril', cRes) +
+    mkMetric(pend, 'Facturas pendientes', 'var(--blue)');
+
+  var acumRes = ing26 - comp26 - gfTot*4;
+  var acumColor = acumRes>=0 ? 'var(--green)' : 'var(--red)';
+  var acumBg = acumRes>=0 ? '#dcfce7' : '#fee2e2';
+  g('dash-acum').innerHTML =
+    '<div class="lbl" style="margin-top:0">Resultado acumulado 2026</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'+
+    '<div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Ingresos</div><div style="font-size:15px;font-weight:700;color:var(--green)">'+eur(ing26)+'</div></div>'+
+    '<div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Compras</div><div style="font-size:15px;font-weight:700;color:var(--orange)">'+eur(comp26)+'</div></div>'+
+    '<div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Gtos fijos</div><div style="font-size:15px;font-weight:700;color:var(--t2)">'+eur(gfTot*4)+'</div></div>'+
+    '</div>'+
+    '<div style="padding:10px;background:'+acumBg+';border-radius:8px;text-align:center">'+
+    '<div style="font-size:11px;color:var(--t3)">Ene-Abr 2026</div>'+
+    '<div style="font-size:20px;font-weight:800;color:'+acumColor+'">'+eur(acumRes)+'</div></div>';
+
+  var alts = [];
+  if(res<0) alts.push(mkAlert('Resultado negativo en Abril: '+eur(res), 'r'));
+  var pF = SD.facturas.filter(function(f){ return f.estado==='Pendiente'; });
+  var pP = SD.proveedores.filter(function(p){ return p.estado==='Pendiente'; });
+  if(pF.length) alts.push(mkAlert(pF.length+' factura(s) de ingreso pendiente(s) de cobro', 'y'));
+  if(pP.length) alts.push(mkAlert(pP.length+' factura(s) de proveedor pendiente(s) de pago', 'y'));
+  alts.push(mkAlert('Sincronizacion activa con JSONBin.io', 'g'));
+  g('dash-alts').innerHTML = alts.join('');
+}
+
+// ============================================================
+// FACTURAS
+// ============================================================
+function renderFacts(){
+  var srch = (g('fsrch').value||'').toLowerCase();
+  var list = SD.facturas.filter(function(f){ return f.mes===curFT; });
+  if(srch) list = list.filter(function(f){
+    return (f.cliente||'').toLowerCase().includes(srch) ||
+           (f.matricula||'').toLowerCase().includes(srch) ||
+           (f.num||'').toLowerCase().includes(srch);
+  });
+
+  var tot = list.reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var cob = list.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var pen = list.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+
+  g('f-sum').innerHTML = mkSumCard('Total facturado (base)', eur(tot),
+    mkChip('Cobrado '+eur(cob),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'ca') : ''));
+
+  if(!list.length){
+    g('f-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">Sin facturas en '+(ML[curFT]||curFT)+'</div>';
+    return;
+  }
+
+  g('f-list').innerHTML = list.map(function(f){
+    var estCls = f.estado==='Cobrado' ? 'cg' : 'ca';
+    var estTxt = f.estado==='Cobrado' ? 'Cobrado' : 'Pendiente';
+    var sub = (f.fecha||'') + (f.num ? ' - Fac#'+f.num : '');
+    var conc = f.concepto ? '<div class="rw-sub" style="font-style:italic">'+(f.concepto.length>55?f.concepto.slice(0,55)+'...':escH(f.concepto))+'</div>' : '';
+    var acts =
+      mkAct('Editar','edit','editFact(\''+f.id+'\')') +
+      mkAct('Ver','view','viewFact(\''+f.id+'\')') +
+      mkAct('Imprimir','print','printFact(\''+f.id+'\')') +
+      mkAct('Eliminar','del','delFact(\''+f.id+'\')');
+    var main =
+      '<div class="rw-tit">'+escH(f.cliente||'Sin cliente')+(f.matricula?' - '+escH(f.matricula):'')+'</div>'+
+      '<div class="rw-sub">'+escH(sub)+'</div>'+conc+
+      '<div class="rw-acts">'+acts+'</div>';
+    var amt =
+      '<div class="rw-amt">'+eur(f.base)+'</div>'+
+      '<div style="font-size:10px;color:var(--t3)">IVA '+eur(f.iva)+'</div>'+
+      mkChip(estTxt, estCls);
+    return mkRow(main, amt);
+  }).join('');
+}
+
+// ============================================================
+// PROVEEDORES
+// ============================================================
+function renderProvs(){
+  var srch = (g('psrch').value||'').toLowerCase();
+  var list = SD.proveedores.filter(function(p){ return p.mes===curPT; });
+  if(srch) list = list.filter(function(p){
+    return (p.proveedor||'').toLowerCase().includes(srch) ||
+           (p.num||'').toLowerCase().includes(srch) ||
+           (p.concepto||'').toLowerCase().includes(srch);
+  });
+
+  var tot = list.reduce(function(a,p){ return a+Number(p.base||0); },0);
+  var pag = list.filter(function(p){ return p.estado==='Pagado'; }).reduce(function(a,p){ return a+Number(p.base||0); },0);
+  var pen = list.filter(function(p){ return p.estado==='Pendiente'; }).reduce(function(a,p){ return a+Number(p.base||0); },0);
+
+  g('p-sum').innerHTML = mkSumCard('Total compras (base)', eur(tot),
+    mkChip('Pagado '+eur(pag),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'cr') : ''));
+
+  if(!list.length){
+    g('p-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">Sin compras en '+(ML[curPT]||curPT)+'</div>';
+    return;
+  }
+
+  g('p-list').innerHTML = list.map(function(p){
+    var estCls = p.estado==='Pagado' ? 'cg' : 'cr';
+    var estTxt = p.estado==='Pagado' ? 'Pagado' : 'Pendiente';
+    var sub = (p.fecha||'') + (p.num ? ' - Fac#'+p.num : '');
+    var conc = p.concepto ? '<div class="rw-sub" style="font-style:italic">'+(p.concepto.length>55?p.concepto.slice(0,55)+'...':escH(p.concepto))+'</div>' : '';
+    var amtColor = p.base<0 ? 'var(--red)' : 'var(--t1)';
+    var acts =
+      mkAct('Editar','edit','editProv(\''+p.id+'\')') +
+      mkAct('Ver','view','viewProv(\''+p.id+'\')') +
+      mkAct('Imprimir','print','printProv(\''+p.id+'\')') +
+      mkAct('Eliminar','del','delProv(\''+p.id+'\')');
+    var main =
+      '<div class="rw-tit">'+escH(p.proveedor||'Proveedor')+'</div>'+
+      '<div class="rw-sub">'+escH(sub)+'</div>'+conc+
+      '<div class="rw-acts">'+acts+'</div>';
+    var amt =
+      '<div class="rw-amt" style="color:'+amtColor+'">'+eur(p.base)+'</div>'+
+      '<div style="font-size:10px;color:var(--t3)">IVA '+eur(p.iva)+'</div>'+
+      mkChip(estTxt, estCls);
+    return mkRow(main, amt);
+  }).join('');
+}
+
+// ============================================================
+// GASTOS
+// ============================================================
+function switchG(type, el){
+  document.querySelectorAll('#sec-gastos .tab').forEach(function(t){ t.classList.remove('on'); });
+  el.classList.add('on');
+  g('gf-panel').style.display = type==='fijos' ? 'block' : 'none';
+  g('gv-panel').style.display = type==='variables' ? 'block' : 'none';
+  renderGastos();
+}
+
+function renderGastos(){
+  // Fijos
+  var gfTot = SD.gastosFijos.reduce(function(a,x){ return a+Number(x.importe_mes||0); },0);
+  g('gf-tot').textContent = eur(gfTot);
+  g('gf-list').innerHTML = SD.gastosFijos.map(function(gf){
+    var warn = gf.importe===0 ? mkChip('Revisar','ca') : '';
+    var sub2 = (gf.period||'') + (gf.notas ? ' - '+gf.notas : '');
+    var acts = mkAct('Editar','edit','editGF(\''+gf.id+'\')') + mkAct('Eliminar','del','delGF(\''+gf.id+'\')');
+    var main = '<div class="rw-tit">'+escH(gf.concepto)+'</div><div class="rw-sub">'+escH(sub2)+'</div><div class="rw-acts">'+acts+'</div>';
+    var amt = '<div class="rw-amt">'+eur(gf.importe_mes)+'/mes</div>'+
+      (gf.importe!==gf.importe_mes ? '<div style="font-size:10px;color:var(--t3)">'+eur(gf.importe)+' real</div>' : '') + warn;
+    return mkRow(main, amt);
+  }).join('');
+
+  // Variables
+  var gvL = SD.gastosVariables.filter(function(x){ return x.mes===curGVT; });
+  var gvTot = gvL.reduce(function(a,x){ return a+Number(x.importe||0); },0);
+  g('gv-sum').innerHTML = '<div class="card" style="padding:10px 13px;margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--t3)">Total gastos variables</span><span style="font-weight:700;color:var(--orange)">'+eur(gvTot)+'</span></div></div>';
+  if(!gvL.length){
+    g('gv-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:20px;font-size:13px">Sin gastos en '+(ML[curGVT]||curGVT)+'</div>';
+    return;
+  }
+  g('gv-list').innerHTML = gvL.map(function(gv){
+    var acts = mkAct('Editar','edit','editGV(\''+gv.id+'\')') + mkAct('Eliminar','del','delGV(\''+gv.id+'\')');
+    var main = '<div class="rw-tit">'+escH(gv.prov||'')+'</div><div class="rw-sub">'+escH(gv.concepto||'')+(gv.fecha?' - '+gv.fecha:'')+'</div><div class="rw-acts">'+acts+'</div>';
+    var amt = '<div class="rw-amt">'+eur(gv.importe)+'</div><div style="font-size:10px;color:var(--t3)">'+escH(gv.pago||'')+'</div>';
+    return mkRow(main, amt);
+  }).join('');
+}
+
+// ============================================================
+// FISCAL
+// ============================================================
+function renderFiscal(){
+  var QQ = [
+    {key:'Q1',lbl:'Q1 2026 - Ene-Mar',meses:['Ene-26','Feb-26','Mar-26'],plazo:'< 20 Abr 2026'},
+    {key:'Q2',lbl:'Q2 2026 - Abr-Jun',meses:['Abr-26','May-26','Jun-26'],plazo:'< 20 Jul 2026'},
+    {key:'Q3',lbl:'Q3 2026 - Jul-Sep',meses:['Jul-26','Ago-26','Sep-26'],plazo:'< 20 Oct 2026'},
+    {key:'Q4',lbl:'Q4 2026 - Oct-Dic',meses:['Oct-26','Nov-26','Dic-26'],plazo:'< 30 Ene 2027'}
+  ];
+  var gfMes = SD.gastosFijos.reduce(function(a,x){ return a+Number(x.importe_mes||0); },0);
+
+  // IVA 303
+  g('iva-cards').innerHTML = QQ.map(function(q){
+    var ivaR = q.meses.reduce(function(a,m){
+      return a + SD.facturas.filter(function(f){ return f.mes===m && f.estado==='Cobrado'; }).reduce(function(s,f){ return s+Number(f.iva||0); },0);
+    },0);
+    var ivaS = q.meses.reduce(function(a,m){
+      return a + SD.proveedores.filter(function(p){ return p.mes===m; }).reduce(function(s,p){ return s+Number(p.iva||0); },0);
+    },0);
+    var net = ivaR - ivaS;
+    var netColor = net>0 ? 'var(--red)' : 'var(--green)';
+    var netBg = net>0 ? '#fee2e2' : '#dcfce7';
+    var netLbl = net>0 ? 'A pagar' : 'A favor';
+    var netCls = net>0 ? 'cr' : 'cg';
+    return '<div class="card" style="margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
+      '<div><div style="font-size:13px;font-weight:700">'+q.lbl+'</div><div style="font-size:11px;color:var(--t3)">Plazo: '+q.plazo+'</div></div>'+
+      mkChip(netLbl, netCls)+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">'+
+      '<div style="background:#f0fdf4;border-radius:8px;padding:8px"><div style="font-size:11px;color:var(--t3)">Repercutido</div><div style="font-weight:700;color:var(--green)">'+eur(ivaR)+'</div></div>'+
+      '<div style="background:#fff5f5;border-radius:8px;padding:8px"><div style="font-size:11px;color:var(--t3)">Soportado</div><div style="font-weight:700;color:var(--red)">'+eur(ivaS)+'</div></div>'+
+      '<div style="background:'+netBg+';border-radius:8px;padding:8px"><div style="font-size:11px;color:var(--t3)">Neto</div><div style="font-weight:700;color:'+netColor+'">'+eur(Math.abs(net))+'</div></div>'+
+      '</div></div>';
+  }).join('');
+
+  // IRPF 130
+  g('irpf-cards').innerHTML = QQ.map(function(q){
+    var ing = q.meses.reduce(function(a,m){
+      return a + SD.facturas.filter(function(f){ return f.mes===m && f.estado==='Cobrado'; }).reduce(function(s,f){ return s+Number(f.base||0); },0);
+    },0);
+    var comp = q.meses.reduce(function(a,m){
+      return a + SD.proveedores.filter(function(p){ return p.mes===m; }).reduce(function(s,p){ return s+Number(p.base||0); },0);
+    },0);
+    var gv = q.meses.reduce(function(a,m){
+      return a + SD.gastosVariables.filter(function(x){ return x.mes===m; }).reduce(function(s,x){ return s+Number(x.importe||0); },0);
+    },0);
+    var gfQ = gfMes * 3;
+    var rnd = ing - comp - gv - gfQ;
+    var cuota = rnd>0 ? rnd*0.2 : 0;
+    var rndColor = rnd>=0 ? 'var(--green)' : 'var(--red)';
+    var cuotaCls = cuota>0 ? 'cb' : 'cg';
+    var cuotaLbl = cuota>0 ? 'A ingresar' : '0 EUR';
+    return '<div class="card" style="margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
+      '<div><div style="font-size:13px;font-weight:700">'+q.lbl+'</div><div style="font-size:11px;color:var(--t3)">'+q.plazo+'</div></div>'+
+      mkChip(cuotaLbl, cuotaCls)+'</div>'+
+      '<div style="font-size:12px;color:var(--t2)">'+
+      '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>Ingresos cobrados</span><b>'+eur(ing)+'</b></div>'+
+      '<div style="display:flex;justify-content:space-between;padding:3px 0"><span>Gastos deducibles</span><b style="color:var(--red)">-'+eur(comp+gv+gfQ)+'</b></div>'+
+      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);margin-top:3px"><span>Rdto. neto</span><b style="color:'+rndColor+'">'+eur(rnd)+'</b></div>'+
+      '<div style="display:flex;justify-content:space-between;padding:3px 0"><span><b>Casilla 20 (20%)</b></span><b style="font-size:15px;color:var(--blue)">'+eur(cuota)+'</b></div>'+
+      '</div></div>';
+  }).join('');
+
+  // Modelo 347
+  var THR = 3005.06;
+  var clients = {}, suppliers = {};
+  SD.facturas.forEach(function(f){
+    if(f.mes && f.mes.endsWith('-26') && f.cliente && f.cliente!=='Particular' && f.cliente!=='Varios')
+      clients[f.cliente] = (clients[f.cliente]||0) + Number(f.base||0);
+  });
+  SD.proveedores.forEach(function(p){
+    if(p.mes && p.mes.endsWith('-26') && p.proveedor)
+      suppliers[p.proveedor] = (suppliers[p.proveedor]||0) + Number(p.base||0);
+  });
+
+  function mk347rows(obj){
+    return Object.entries(obj).sort(function(a,b){ return b[1]-a[1]; }).map(function(e){
+      var cls = e[1]>=THR ? 'cr' : 'cg';
+      var lbl = e[1]>=THR ? 'M347' : 'OK';
+      return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">'+
+        '<span>'+escH(e[0])+'</span>'+
+        '<span style="font-weight:600">'+eur(e[1])+' '+mkChip(lbl,cls)+'</span></div>';
+    }).join('') || '<div style="font-size:12px;color:var(--t4)">Sin datos</div>';
+  }
+
+  g('m347-cards').innerHTML = '<div class="card">'+
+    '<div style="font-size:12px;color:var(--t3);margin-bottom:10px">Umbral: 3.005,06 EUR (base, sin IVA) - Declaracion feb. ano siguiente</div>'+
+    '<div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Clientes 2026</div>'+mk347rows(clients)+
+    '<div style="font-size:12px;font-weight:600;color:var(--t2);margin:10px 0 5px">Proveedores 2026</div>'+mk347rows(suppliers)+
+    '</div>';
+}
+
+// ============================================================
+// FACTURA CRUD
+// ============================================================
+function calcF(){
+  var b = parseFloat(g('mf-base').value)||0;
+  var iv = Math.round(b*21)/100;
+  g('mf-iva').value = iv.toFixed(2);
+  g('mf-tot').value = (b+iv).toFixed(2);
+}
+
+function openFact(){
+  g('mf-tit').textContent='Nueva Factura de Ingreso';
+  g('mf-id').value='';
+  g('mf-fecha').value=new Date().toISOString().slice(0,10);
+  g('mf-num').value=''; g('mf-cli').value=''; g('mf-mat').value='';
+  g('mf-base').value=''; g('mf-iva').value=''; g('mf-tot').value='';
+  g('mf-conc').value=''; g('mf-pago').value='Transferencia'; g('mf-est').value='Cobrado';
+  g('mf-mes').value=curFT;
+  g('mf').classList.add('on');
+}
+function closeFact(){ g('mf').classList.remove('on'); }
+
+function editFact(id){
+  var f = SD.facturas.find(function(x){ return x.id===id; }); if(!f) return;
+  g('mf-tit').textContent='Editar Factura';
+  g('mf-id').value=id; g('mf-mes').value=f.mes||curFT;
+  g('mf-fecha').value=f.fecha||''; g('mf-num').value=f.num||'';
+  g('mf-cli').value=f.cliente||''; g('mf-mat').value=f.matricula||'';
+  g('mf-base').value=f.base||''; g('mf-iva').value=f.iva||''; g('mf-tot').value=f.total||'';
+  g('mf-conc').value=f.concepto||''; g('mf-pago').value=f.pago||'Transferencia';
+  g('mf-est').value=f.estado||'Cobrado';
+  g('mf').classList.add('on');
+}
+
+async function saveFact(){
+  var base = parseFloat(g('mf-base').value)||0;
+  if(!base){ toast('Introduce la base imponible'); return; }
+  var iva = Math.round(base*2100)/100/100;
+  var obj = {
+    id: g('mf-id').value||uid(), mes:g('mf-mes').value,
+    fecha:g('mf-fecha').value, num:g('mf-num').value||('F'+SD.numNext),
+    cliente:g('mf-cli').value, matricula:g('mf-mat').value,
+    base:base, iva:iva, total:base+iva,
+    concepto:g('mf-conc').value, pago:g('mf-pago').value, estado:g('mf-est').value
+  };
+  var eid = g('mf-id').value;
+  if(eid){ var i=SD.facturas.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.facturas[i]=obj; }
+  else { SD.facturas.push(obj); SD.numNext++; }
+  closeFact(); toast(eid?'Factura actualizada':'Factura guardada'); renderFacts();
+  await cloudPut();
+}
+
+async function delFact(id){
+  var f = SD.facturas.find(function(x){ return x.id===id; });
+  if(!f||!confirm('Eliminar factura de '+(f.cliente||'este cliente')+'?')) return;
+  SD.facturas = SD.facturas.filter(function(x){ return x.id!==id; });
+  toast('Factura eliminada'); renderFacts(); await cloudPut();
+}
+
+// ============================================================
+// PROVEEDOR CRUD
+// ============================================================
+function calcP(){
+  var b = parseFloat(g('mp-base').value)||0;
+  var iv = Math.round(b*21)/100;
+  g('mp-iva').value = iv.toFixed(2);
+  g('mp-tot').value = (b+iv).toFixed(2);
+}
+
+function openProv(){
+  g('mp-tit').textContent='Nueva Compra Proveedor';
+  g('mp-id').value=''; g('mp-fecha').value=new Date().toISOString().slice(0,10);
+  g('mp-num').value=''; g('mp-prov').value='';
+  g('mp-base').value=''; g('mp-iva').value=''; g('mp-tot').value='';
+  g('mp-conc').value=''; g('mp-est').value='Pagado'; g('mp-mes').value=curPT;
+  g('mp').classList.add('on');
+}
+function closeProv(){ g('mp').classList.remove('on'); }
+
+function editProv(id){
+  var p = SD.proveedores.find(function(x){ return x.id===id; }); if(!p) return;
+  g('mp-tit').textContent='Editar Factura Proveedor';
+  g('mp-id').value=id; g('mp-mes').value=p.mes||curPT;
+  g('mp-fecha').value=p.fecha||''; g('mp-num').value=p.num||'';
+  g('mp-prov').value=p.proveedor||''; g('mp-base').value=p.base||'';
+  g('mp-iva').value=p.iva||''; g('mp-tot').value=p.total||'';
+  g('mp-conc').value=p.concepto||''; g('mp-est').value=p.estado||'Pagado';
+  g('mp').classList.add('on');
+}
+
+async function saveProv(){
+  var base = parseFloat(g('mp-base').value);
+  if(isNaN(base)){ toast('Introduce la base imponible'); return; }
+  var iva = Math.round(base*2100)/100/100;
+  var obj = {
+    id:g('mp-id').value||uid(), mes:g('mp-mes').value,
+    fecha:g('mp-fecha').value, num:g('mp-num').value,
+    proveedor:g('mp-prov').value, base:base, iva:iva, total:base+iva,
+    concepto:g('mp-conc').value, estado:g('mp-est').value
+  };
+  var eid = g('mp-id').value;
+  if(eid){ var i=SD.proveedores.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.proveedores[i]=obj; }
+  else { SD.proveedores.push(obj); }
+  closeProv(); toast(eid?'Proveedor actualizado':'Compra guardada'); renderProvs();
+  await cloudPut();
+}
+
+async function delProv(id){
+  var p = SD.proveedores.find(function(x){ return x.id===id; });
+  if(!p||!confirm('Eliminar factura de '+p.proveedor+'?')) return;
+  SD.proveedores = SD.proveedores.filter(function(x){ return x.id!==id; });
+  toast('Eliminado'); renderProvs(); await cloudPut();
+}
+
+// ============================================================
+// GASTO FIJO CRUD
+// ============================================================
+function openGF(){
+  g('mgf-tit').textContent='Nuevo Gasto Fijo'; g('gf-id').value='';
+  g('gf-conc').value=''; g('gf-per').value='Mensual'; g('gf-imp').value=''; g('gf-nota').value='';
+  g('mgf').classList.add('on');
+}
+function closeGF(){ g('mgf').classList.remove('on'); }
+
+function editGF(id){
+  var gf = SD.gastosFijos.find(function(x){ return x.id===id; }); if(!gf) return;
+  g('mgf-tit').textContent='Editar Gasto Fijo'; g('gf-id').value=id;
+  g('gf-conc').value=gf.concepto||''; g('gf-per').value=gf.period||'Mensual';
+  g('gf-imp').value=gf.importe||''; g('gf-nota').value=gf.notas||'';
+  g('mgf').classList.add('on');
+}
+
+async function saveGF(){
+  var imp = parseFloat(g('gf-imp').value)||0;
+  var per = g('gf-per').value;
+  var impM = per==='Bimestral'?imp/2:per==='Trimestral'?imp/3:per==='Anual'?imp/12:imp;
+  var obj = {id:g('gf-id').value||uid(), concepto:g('gf-conc').value, period:per, importe:imp, importe_mes:impM, notas:g('gf-nota').value};
+  var eid = g('gf-id').value;
+  if(eid){ var i=SD.gastosFijos.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.gastosFijos[i]=obj; }
+  else { SD.gastosFijos.push(obj); }
+  closeGF(); toast(eid?'Actualizado':'Gasto fijo anadido'); renderGastos(); await cloudPut();
+}
+
+async function delGF(id){
+  if(!confirm('Eliminar este gasto fijo?')) return;
+  SD.gastosFijos = SD.gastosFijos.filter(function(x){ return x.id!==id; });
+  toast('Eliminado'); renderGastos(); await cloudPut();
+}
+
+// ============================================================
+// GASTO VARIABLE CRUD
+// ============================================================
+function openGV(){
+  g('mgv-tit').textContent='Nuevo Gasto Variable'; g('gv-id').value='';
+  g('gv-fecha').value=new Date().toISOString().slice(0,10);
+  g('gv-num').value=''; g('gv-prov').value=''; g('gv-conc').value='';
+  g('gv-imp').value=''; g('gv-pago').value='Transferencia'; g('gv-mes').value=curGVT;
+  g('mgv').classList.add('on');
+}
+function closeGV(){ g('mgv').classList.remove('on'); }
+
+function editGV(id){
+  var gv = SD.gastosVariables.find(function(x){ return x.id===id; }); if(!gv) return;
+  g('mgv-tit').textContent='Editar Gasto Variable'; g('gv-id').value=id;
+  g('gv-mes').value=gv.mes||curGVT; g('gv-fecha').value=gv.fecha||'';
+  g('gv-num').value=gv.num||''; g('gv-prov').value=gv.prov||'';
+  g('gv-conc').value=gv.concepto||''; g('gv-imp').value=gv.importe||'';
+  g('gv-pago').value=gv.pago||'Transferencia';
+  g('mgv').classList.add('on');
+}
+
+async function saveGV(){
+  var imp = parseFloat(g('gv-imp').value)||0;
+  var obj = {
+    id:g('gv-id').value||uid(), mes:g('gv-mes').value,
+    fecha:g('gv-fecha').value, num:g('gv-num').value,
+    prov:g('gv-prov').value, concepto:g('gv-conc').value,
+    importe:imp, pago:g('gv-pago').value
+  };
+  var eid = g('gv-id').value;
+  if(eid){ var i=SD.gastosVariables.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.gastosVariables[i]=obj; }
+  else { SD.gastosVariables.push(obj); }
+  closeGV(); toast(eid?'Actualizado':'Gasto anadido'); renderGastos(); await cloudPut();
+}
+
+async function delGV(id){
+  if(!confirm('Eliminar este gasto?')) return;
+  SD.gastosVariables = SD.gastosVariables.filter(function(x){ return x.id!==id; });
+  toast('Eliminado'); renderGastos(); await cloudPut();
+}
+
+// ============================================================
+// PRINT / VIEW
+// ============================================================
+function buildInvHTML(f){
+  return '<div class="inv">'+
+    '<div class="inv-hdr">'+
+    '<div><div class="inv-logo">AUTO <span>H&amp;R</span></div>'+
+    '<div style="font-size:11px;color:#64748b;margin-top:2px">Calle Sant Isidre 85, Gava (Barcelona)</div></div>'+
+    '<div style="text-align:right">'+
+    '<div style="font-size:14px;font-weight:700;color:var(--blue)">FACTURA</div>'+
+    '<div style="font-size:12px;font-weight:600">'+(f.num||'S/N')+'</div>'+
+    '<div style="font-size:11px;color:#64748b">'+(f.fecha||'')+'</div></div></div>'+
+    '<div style="margin-bottom:10px">'+
+    '<div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:3px">CLIENTE</div>'+
+    '<div style="font-size:13px;font-weight:600">'+escH(f.cliente||'--')+'</div>'+
+    (f.matricula ? '<div style="font-size:12px;color:#64748b">Matricula: '+escH(f.matricula)+'</div>' : '')+
+    '</div>'+
+    '<table class="inv-tbl"><thead><tr><th>Concepto</th><th style="text-align:right">Importe</th></tr></thead>'+
+    '<tbody><tr><td>'+escH(f.concepto||'Servicio de taller')+'</td><td style="text-align:right">'+eur(f.base)+'</td></tr></tbody></table>'+
+    '<div class="inv-tot"><div style="font-size:12px;text-align:right">'+
+    '<div>Base imponible: '+eur(f.base)+'</div>'+
+    '<div>IVA (21%): '+eur(f.iva)+'</div>'+
+    '<div style="font-size:15px;border-top:1px solid #0f172a;margin-top:5px;padding-top:5px">TOTAL: '+eur(f.total)+'</div>'+
+    '</div></div>'+
+    '<div style="margin-top:12px;font-size:11px;color:#64748b">'+
+    '<div>Forma de pago: '+escH(f.pago||'--')+'</div>'+
+    '<div>Estado: '+(f.estado==='Cobrado'?'Cobrado':'Pendiente')+'</div></div></div>';
+}
+
+function buildProvHTML(p){
+  return '<div class="inv">'+
+    '<div class="inv-hdr">'+
+    '<div><div class="inv-logo">AUTO <span>H&amp;R</span></div>'+
+    '<div style="font-size:11px;color:#64748b">Calle Sant Isidre 85, Gava (Barcelona)</div></div>'+
+    '<div style="text-align:right">'+
+    '<div style="font-size:14px;font-weight:700;color:var(--orange)">COMPRA</div>'+
+    '<div style="font-size:12px;font-weight:600">'+(p.num||'S/N')+'</div>'+
+    '<div style="font-size:11px;color:#64748b">'+(p.fecha||'')+'</div></div></div>'+
+    '<div style="margin-bottom:10px">'+
+    '<div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:3px">PROVEEDOR</div>'+
+    '<div style="font-size:13px;font-weight:600">'+escH(p.proveedor||'--')+'</div></div>'+
+    (p.concepto ? '<div style="font-size:12px;margin-bottom:10px;color:#334155">'+escH(p.concepto)+'</div>' : '')+
+    '<table class="inv-tbl"><thead><tr><th>Descripcion</th><th style="text-align:right">Base</th><th style="text-align:right">IVA</th><th style="text-align:right">Total</th></tr></thead>'+
+    '<tbody><tr><td>'+escH(p.concepto||'Compra de materiales')+'</td>'+
+    '<td style="text-align:right">'+eur(p.base)+'</td>'+
+    '<td style="text-align:right">'+eur(p.iva)+'</td>'+
+    '<td style="text-align:right">'+eur(p.total)+'</td></tr></tbody></table>'+
+    '<div class="inv-tot"><div style="font-size:12px;text-align:right">'+
+    '<div>Base imponible: '+eur(p.base)+'</div>'+
+    '<div>IVA (21%): '+eur(p.iva)+'</div>'+
+    '<div style="font-size:15px;border-top:1px solid #0f172a;margin-top:5px;padding-top:5px">TOTAL: '+eur(p.total)+'</div>'+
+    '</div></div>'+
+    '<div style="margin-top:12px;font-size:11px;color:#64748b">Estado: '+(p.estado==='Pagado'?'Pagado':'Pendiente')+'</div></div>';
+}
+
+function viewFact(id){ var f=SD.facturas.find(function(x){return x.id===id;}); if(!f) return; g('pm-tit').textContent='Factura - '+f.cliente; g('pm-body').innerHTML=buildInvHTML(f); g('pmw').classList.add('on'); }
+function printFact(id){ viewFact(id); }
+function viewProv(id){ var p=SD.proveedores.find(function(x){return x.id===id;}); if(!p) return; g('pm-tit').textContent='Compra - '+p.proveedor; g('pm-body').innerHTML=buildProvHTML(p); g('pmw').classList.add('on'); }
+function printProv(id){ viewProv(id); }
+function closePM(){ g('pmw').classList.remove('on'); }
+
+function doPrint(){
+  var content = g('pm-body').innerHTML;
+  var w = window.open('','_blank','width=600,height=800');
+  var css = [
+    'body{font-family:Arial,sans-serif;padding:20px;max-width:580px;margin:0 auto}',
+    '.inv{border:1px solid #e2e8f0;border-radius:8px;padding:20px}',
+    '.inv-hdr{display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #0f172a}',
+    '.inv-logo{font-size:20px;font-weight:800}',
+    '.inv-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}',
+    '.inv-tbl th{background:#f8fafc;padding:7px 9px;text-align:left;font-weight:600;border-bottom:1px solid #e2e8f0}',
+    '.inv-tbl td{padding:6px 9px;border-bottom:1px solid #f1f5f9}',
+    '.inv-tot{margin-top:10px;border-top:2px solid #0f172a;padding-top:8px;display:flex;justify-content:flex-end}'
+  ].join('');
+  var doc = '<html><head><title>Auto HR</title><style>' + css + '</style></head><body>' + content + '</body></html>';
+  w.document.write(doc);
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportJSON(){
+  var blob = new Blob([JSON.stringify(SD,null,2)],{type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'AutoHR_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('Datos exportados');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('visibilitychange', function(){ if(!document.hidden && BIN) cloudGet(); });
+loadCfg();
+</script>
+
+<script>
+if('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claude')){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js')
+      .then(function(){ console.log('SW registrado'); })
+      .catch(function(e){ console.log('SW error', e.message); });
+  });
+}
+</script>
+</body>
+</html>
