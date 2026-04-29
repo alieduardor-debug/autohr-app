@@ -33,7 +33,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .slbl{font-size:11px;color:#94a3b8}
 
 /* Navbar */
-.navbar{background:var(--t1);border-top:1px solid #1e293b;display:grid;grid-template-columns:repeat(5,1fr);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding-bottom:env(safe-area-inset-bottom,8px)}
+.navbar{background:var(--t1);border-top:1px solid #1e293b;display:grid;grid-template-columns:repeat(6,1fr);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding-bottom:env(safe-area-inset-bottom,8px)}
 .nb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;border:none;background:transparent;cursor:pointer;font-size:9px;color:#64748b;font-family:inherit;-webkit-appearance:none}
 .nb.on{color:#fff}
 .ni{font-size:20px;line-height:1.2}
@@ -241,6 +241,12 @@ textarea{resize:vertical;min-height:60px}
     </div>
   </div>
 
+  <div class="sec" id="sec-tesoreria">
+    <div class="lbl">Vision por mes</div>
+    <div class="tabs" id="tes-tabs" style="margin-bottom:12px"></div>
+    <div id="tes-body"></div>
+  </div>
+
   <div class="sec" id="sec-fiscal">
     <div class="lbl">Modelo 303 - IVA Trimestral</div>
     <div id="iva-cards"></div>
@@ -273,6 +279,7 @@ textarea{resize:vertical;min-height:60px}
   <button class="nb" id="nb-facturas" onclick="goTab('facturas')"><span class="ni">&#129534;</span>Facturas</button>
   <button class="nb" id="nb-proveedores" onclick="goTab('proveedores')"><span class="ni">&#128722;</span>Proveedores</button>
   <button class="nb" id="nb-gastos" onclick="goTab('gastos')"><span class="ni">&#128176;</span>Gastos</button>
+  <button class="nb" id="nb-tesoreria" onclick="goTab('tesoreria')"><span class="ni">&#128200;</span>Tesorer.</button>
   <button class="nb" id="nb-fiscal" onclick="goTab('fiscal')"><span class="ni">&#128203;</span>Fiscal</button>
 </div>
 
@@ -404,7 +411,7 @@ var JBIN = 'https://api.jsonbin.io/v3/b/';
 // STATE
 // ============================================================
 var BIN = '', KEY = '', USER = '', lastSync = null;
-var curFT = 'Abr-26', curPT = 'Sep-25', curGVT = 'Ene-26';
+var curFT = 'Abr-26', curPT = 'Sep-25', curGVT = 'Ene-26', curTET = 'Abr-26';
 
 var SD = {
   facturas: [
@@ -579,6 +586,7 @@ function goTab(name){
   if(name==='proveedores') renderProvs();
   if(name==='gastos') renderGastos();
   if(name==='fiscal') renderFiscal();
+  if(name==='tesoreria') renderTesoreria();
 }
 
 // ============================================================
@@ -720,6 +728,7 @@ function renderAll(){
     else if(id==='proveedores') renderProvs();
     else if(id==='gastos') renderGastos();
     else if(id==='fiscal') renderFiscal();
+    else if(id==='tesoreria') renderTesoreria();
   }
 }
 
@@ -758,6 +767,18 @@ function initTabs(){
     gvtEl.appendChild(b);
   });
   // Modal selects
+  // Tesoreria tabs
+  var tetEl = g('tes-tabs');
+  if(tetEl){
+    tetEl.innerHTML = '';
+    MESES_I.forEach(function(m){
+      var b = document.createElement('button');
+      b.className = 'tab' + (m===curTET?' on':'');
+      b.textContent = m;
+      b.onclick = function(){ curTET=m; initTabs(); renderTesoreria(); };
+      tetEl.appendChild(b);
+    });
+  }
   var meses_all = MESES_I;
   ['mf-mes','mp-mes','gv-mes'].forEach(function(id){
     var s = g(id); if(!s) return;
@@ -989,6 +1010,189 @@ function renderGastos(){
     var amt = '<div class="rw-amt">'+eur(gv.importe)+'</div><div style="font-size:10px;color:var(--t3)">'+escH(gv.pago||'')+'</div>';
     return mkRow(main, amt);
   }).join('');
+}
+
+
+// ============================================================
+// TESORERIA
+// ============================================================
+function renderTesoreria(){
+  var tet = g('tes-tabs');
+  if(!tet) return;
+
+  var m = curTET;
+  var idx = MESES_I.indexOf(m);
+  var mAnt = idx>0 ? MESES_I[idx-1] : null; // mes anterior (proveedores vencen)
+  var mSig = idx<MESES_I.length-1 ? MESES_I[idx+1] : null; // mes siguiente
+
+  // Ingresos del mes seleccionado
+  var facs = SD.facturas.filter(function(f){ return f.mes===m; });
+  var ingTotal = facs.reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var ingCobrado = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var ingPendiente = facs.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var ivaRepercutido = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.iva||0); },0);
+
+  // Proveedores del mes anterior (vencen este mes - 30 dias)
+  var provsAnt = mAnt ? SD.proveedores.filter(function(p){ return p.mes===mAnt; }) : [];
+  var pagarProvs = provsAnt.reduce(function(a,p){ return a+Number(p.total||0); },0); // total c/IVA
+
+  // Proveedores del mes actual (vencen el mes que viene)
+  var provsAct = SD.proveedores.filter(function(p){ return p.mes===m; });
+  var pagarProvsSig = provsAct.reduce(function(a,p){ return a+Number(p.total||0); },0);
+  var ivaSoportado = provsAct.reduce(function(a,p){ return a+Number(p.iva||0); },0);
+
+  // Gastos fijos mensual
+  var gfMes = SD.gastosFijos.reduce(function(a,x){ return a+Number(x.importe_mes||0); },0);
+
+  // Gastos variables del mes
+  var gvMes = SD.gastosVariables.filter(function(x){ return x.mes===m; }).reduce(function(a,x){ return a+Number(x.importe||0); },0);
+
+  // IVA neto a pagar (trimestral - estimacion)
+  var ivaNeto = ivaRepercutido - ivaSoportado;
+
+  // Calculo IRPF trimestral estimado (20% rdto neto)
+  // Buscar a que trimestre pertenece el mes
+  var trimMap = {
+    'Ene-26':1,'Feb-26':1,'Mar-26':1,
+    'Abr-26':2,'May-26':2,'Jun-26':2,
+    'Jul-26':3,'Ago-26':3,'Sep-26':3,
+    'Oct-26':4,'Nov-26':4,'Dic-26':4
+  };
+  var qMeses = {
+    1:['Ene-26','Feb-26','Mar-26'],
+    2:['Abr-26','May-26','Jun-26'],
+    3:['Jul-26','Ago-26','Sep-26'],
+    4:['Oct-26','Nov-26','Dic-26']
+  };
+  var qNum = trimMap[m];
+  var qMs = qMeses[qNum]||[m];
+  var qIng = qMs.reduce(function(a,qm){
+    return a+SD.facturas.filter(function(f){ return f.mes===qm&&f.estado==='Cobrado'; }).reduce(function(s,f){ return s+Number(f.base||0); },0);
+  },0);
+  var qComp = qMs.reduce(function(a,qm){
+    return a+SD.proveedores.filter(function(p){ return p.mes===qm; }).reduce(function(s,p){ return s+Number(p.base||0); },0);
+  },0);
+  var qGv = qMs.reduce(function(a,qm){
+    return a+SD.gastosVariables.filter(function(x){ return x.mes===qm; }).reduce(function(s,x){ return s+Number(x.importe||0); },0);
+  },0);
+  var qRnd = qIng - qComp - qGv - gfMes*3;
+  var irpfQ = qRnd>0 ? qRnd*0.20 : 0;
+  var esMesFinQ = (m==='Mar-26'||m==='Jun-26'||m==='Sep-26'||m==='Dic-26');
+
+  // MINIMO EN BANCO este mes
+  var minimoMes = pagarProvs + gfMes + gvMes;
+  // MINIMO si ademas vence IRPF/IVA este mes (trimestral)
+  var minimoConImpuestos = minimoMes + (esMesFinQ ? irpfQ + Math.max(ivaNeto,0) : 0);
+
+  // Resultado real del mes
+  var resultadoReal = ingCobrado - pagarProvs - gfMes - gvMes;
+
+  // Margen de seguridad (15% sobre minimo)
+  var margenSeg = minimoConImpuestos * 0.15;
+  var minimoRecomendado = minimoConImpuestos + margenSeg;
+
+  var html = '';
+
+  // -- SEMAFORO RESUMEN --
+  var semaforoColor = resultadoReal>=0 ? '#16a34a' : '#dc2626';
+  var semaforoBg = resultadoReal>=0 ? '#dcfce7' : '#fee2e2';
+  var semaforoIcon = resultadoReal>=minimoRecomendado ? '&#128994;' : resultadoReal>=0 ? '&#128993;' : '&#128308;';
+  var semaforoTxt = resultadoReal>=minimoRecomendado ? 'Posicion solida' : resultadoReal>=0 ? 'Atencion: margen justo' : 'Alerta: deficit este mes';
+
+  html += '<div style="background:'+semaforoBg+';border-radius:14px;padding:14px;margin-bottom:12px;text-align:center">';
+  html += '<div style="font-size:32px">'+semaforoIcon+'</div>';
+  html += '<div style="font-size:15px;font-weight:700;color:'+semaforoColor+';margin-top:4px">'+semaforoTxt+'</div>';
+  html += '<div style="font-size:12px;color:#374151;margin-top:2px">'+(ML[m]||m)+'</div></div>';
+
+  // -- INGRESOS --
+  html += '<div class="card" style="margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Ingresos del mes</div>';
+  html += mkFilaTesoreria('Facturas emitidas (base)', eur(ingTotal), 'var(--t2)', false);
+  html += mkFilaTesoreria('Cobrado', eur(ingCobrado), 'var(--green)', true);
+  if(ingPendiente>0) html += mkFilaTesoreria('Pendiente de cobro', eur(ingPendiente), 'var(--orange)', false);
+  html += mkFilaTesoreria('IVA repercutido (21%)', eur(ivaRepercutido), 'var(--t3)', false);
+  html += '</div>';
+
+  // -- PAGOS ESTE MES --
+  html += '<div class="card" style="margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Pagos obligatorios este mes</div>';
+
+  if(pagarProvs>0){
+    html += '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">Proveedores '+(mAnt||'')+ ' (vencen ahora)</div>';
+    provsAnt.forEach(function(p){
+      html += mkFilaTesoreria(p.proveedor+' '+p.num, eur(p.total), p.estado==='Pagado'?'var(--t4)':'var(--red)', false);
+    });
+    html += mkFilaTesoreria('Subtotal proveedores', eur(pagarProvs), 'var(--red)', true);
+    html += '<div style="height:8px"></div>';
+  } else {
+    html += '<div style="font-size:12px;color:var(--t4);padding:6px 0">Sin proveedores del mes anterior</div>';
+  }
+
+  html += mkFilaTesoreria('Gastos fijos mensuales', eur(gfMes), 'var(--orange)', false);
+  if(gvMes>0) html += mkFilaTesoreria('Gastos variables del mes', eur(gvMes), 'var(--orange)', false);
+
+  if(esMesFinQ){
+    html += '<div style="height:6px"></div>';
+    html += '<div style="font-size:11px;color:var(--blue);margin-bottom:4px;font-weight:600">Vence trimestre fiscal</div>';
+    html += mkFilaTesoreria('IVA a pagar Mod.303 (estimado)', eur(Math.max(ivaNeto,0)), 'var(--blue)', false);
+    html += mkFilaTesoreria('IRPF Mod.130 (estimado 20%)', eur(irpfQ), 'var(--blue)', false);
+  }
+
+  html += '</div>';
+
+  // -- MINIMO EN BANCO --
+  html += '<div style="background:#1e293b;border-radius:14px;padding:14px;margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Minimo en banco</div>';
+
+  html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
+  html += '<span style="font-size:12px;color:#cbd5e1">Para pagar proveedores+gastos</span>';
+  html += '<span style="font-size:13px;font-weight:600;color:#fff">'+eur(minimoMes)+'</span></div>';
+
+  if(esMesFinQ){
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
+    html += '<span style="font-size:12px;color:#cbd5e1">+ Impuestos trimestrales</span>';
+    html += '<span style="font-size:13px;font-weight:600;color:#93c5fd">'+eur(irpfQ+Math.max(ivaNeto,0))+'</span></div>';
+  }
+
+  html += '<div style="border-top:1px solid #334155;padding-top:10px;margin-top:6px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+  html += '<span style="font-size:12px;color:#94a3b8">Recomendado (+15% margen)</span>';
+  html += '<span style="font-size:20px;font-weight:800;color:#fbbf24">'+eur(minimoRecomendado)+'</span></div></div>';
+  html += '</div>';
+
+  // -- RESULTADO Y PROXIMO MES --
+  html += '<div class="card" style="margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Resultado del mes</div>';
+  html += mkFilaTesoreria('Cobrado', eur(ingCobrado), 'var(--green)', false);
+  html += mkFilaTesoreria('- Proveedores pagados', '-'+eur(pagarProvs), 'var(--red)', false);
+  html += mkFilaTesoreria('- Gastos fijos', '-'+eur(gfMes), 'var(--orange)', false);
+  if(gvMes>0) html += mkFilaTesoreria('- Gastos variables', '-'+eur(gvMes), 'var(--orange)', false);
+  html += '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">';
+  html += mkFilaTesoreria('RESULTADO NETO', eur(resultadoReal), resultadoReal>=0?'var(--green)':'var(--red)', true);
+  html += '</div></div>';
+
+  // -- AVISO MES SIGUIENTE --
+  if(pagarProvsSig>0 && mSig){
+    html += '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:12px;margin-bottom:9px">';
+    html += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">Aviso: vence en '+(ML[mSig]||mSig)+'</div>';
+    html += '<div style="font-size:12px;color:#78350f">Las facturas de proveedores de <b>'+(ML[m]||m)+'</b> vencen el mes que viene:</div>';
+    provsAct.forEach(function(p){
+      html += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:#92400e">';
+      html += '<span>'+escH(p.proveedor)+' '+escH(p.num||'')+'</span><span style="font-weight:600">'+eur(p.total)+'</span></div>';
+    });
+    html += '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid #fcd34d">';
+    html += '<span style="font-size:12px;font-weight:700;color:#92400e">Total a reservar</span>';
+    html += '<span style="font-size:15px;font-weight:800;color:#92400e">'+eur(pagarProvsSig)+'</span></div></div>';
+  }
+
+  g('tes-body').innerHTML = html;
+}
+
+function mkFilaTesoreria(lbl, val, color, negrita){
+  var fw = negrita ? '700' : '400';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">' +
+    '<span style="font-size:12px;color:var(--t2);font-weight:'+fw+'">'+escH(lbl)+'</span>' +
+    '<span style="font-size:13px;font-weight:'+fw+';color:'+color+'">'+val+'</span></div>';
 }
 
 // ============================================================
