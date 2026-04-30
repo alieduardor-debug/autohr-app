@@ -257,12 +257,58 @@ textarea{resize:vertical;min-height:60px}
   </div>
 
   <div class="sec" id="sec-ajustes">
-    <div class="lbl">Cuenta</div>
+    <div class="lbl">Sesion activa</div>
     <div class="card">
       <div style="font-size:14px;font-weight:600" id="adj-user">--</div>
       <div style="font-size:12px;color:var(--t3);margin-top:3px" id="adj-sync">Ultima sync: --</div>
     </div>
-    <div class="lbl">Datos</div>
+
+    <div class="lbl">Datos fiscales del emisor</div>
+    <div class="card" style="padding:0">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Nombre / Empresa</div>
+        <input type="text" id="prf-nombre" style="border:none;padding:0;font-size:14px;font-weight:600;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">NIF / CIF</div>
+        <input type="text" id="prf-nif" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Regimen fiscal</div>
+        <input type="text" id="prf-regimen" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Direccion fiscal</div>
+        <input type="text" id="prf-dir" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Email</div>
+        <input type="email" id="prf-email" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" placeholder="correo@email.com" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Telefono</div>
+        <input type="tel" id="prf-tel" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" placeholder="+34 000 000 000" onchange="savePerfil()">
+      </div>
+    </div>
+
+    <div class="lbl">Datos bancarios</div>
+    <div class="card" style="padding:0">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">IBAN</div>
+        <input type="text" id="prf-iban" style="border:none;padding:0;font-size:13px;font-weight:600;background:transparent;outline:none;width:100%;font-family:monospace" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Banco</div>
+        <input type="text" id="prf-banco" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Titular de la cuenta</div>
+        <input type="text" id="prf-titular" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+    </div>
+    <button class="btn bp" onclick="savePerfil(true)">Guardar datos fiscales</button>
+
+    <div class="lbl">Sincronizacion</div>
     <button class="btn" onclick="syncNow()">Sincronizar ahora</button>
     <button class="btn bs" onclick="testConexion()">Verificar conexion JSONBin</button>
     <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
@@ -550,7 +596,20 @@ var SD = {
     {id:'gv14',mes:'Dic-25',fecha:'2025-12-01',num:'25-2641',prov:'Asemar',concepto:'Gestoria Diciembre 2025',importe:60.5,pago:'Transferencia'},
     {id:'gv15',mes:'Dic-25',fecha:'2025-12-01',num:'2100',prov:'Zaballos',concepto:'Asesoria Nov-Dic 2025',importe:153.23,pago:'Transferencia'}
   ],
-  numNext: 68
+  numNext: 68,
+  perfil: {
+    nombre: 'Ali Eduardo Rebolledo Lozada',
+    nif: '56010757F',
+    regimen: 'Autonomo - Regimen General IVA',
+    direccion: 'Calle Sant Isidre 85, Gava (Barcelona)',
+    email: '',
+    telefono: '',
+    iban: 'ES41 2100 8758 9802 0012 8887',
+    banco: 'CaixaBank',
+    titular_cuenta: 'Ali Eduardo Rebolledo Lozada',
+    nombre_empresa: 'Auto H&R',
+    logo_letra: 'HR'
+  }
 };
 
 // ============================================================
@@ -587,6 +646,7 @@ function goTab(name){
   if(name==='gastos') renderGastos();
   if(name==='fiscal') renderFiscal();
   if(name==='tesoreria') renderTesoreria();
+  if(name==='ajustes') loadPerfil();
 }
 
 // ============================================================
@@ -622,6 +682,7 @@ async function cloudGet(){
       if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos=d.gastosFijos;
       if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables=d.gastosVariables;
       if(d.numNext && d.numNext>SD.numNext) SD.numNext=d.numNext;
+      if(d.perfil) SD.perfil=Object.assign({},SD.perfil,d.perfil);
     } else { needsPush=true; }
     lastSync=new Date();
     setSyncStatus('ok');
@@ -697,6 +758,7 @@ function startApp(){
   if(sub) sub.textContent = USER;
   initTabs();
   renderAll(); // render con datos locales primero (rapido)
+  loadPerfil();
   cloudGet();  // luego sync con servidor (actualiza si hay mas datos)
   setInterval(function(){
     if(!document.hidden && BIN) cloudGet();
@@ -1484,36 +1546,69 @@ async function delGV(id){
 // PRINT / VIEW
 // ============================================================
 function buildInvHTML(f){
+  var pr = SD.perfil||{};
+  var nomEmp = pr.nombre||'Ali Eduardo Rebolledo Lozada';
+  var nif = pr.nif||'56010757F';
+  var reg = pr.regimen||'Autonomo - Regimen General IVA';
+  var dir = pr.direccion||'Calle Sant Isidre 85, Gava (Barcelona)';
+  var iban = pr.iban||'ES41 2100 8758 9802 0012 8887';
+  var banco = pr.banco||'CaixaBank';
+  var titular = pr.titular_cuenta||'Ali Eduardo Rebolledo Lozada';
+  var email = pr.email||'';
+  var tel = pr.telefono||'';
   return '<div class="inv">'+
     '<div class="inv-hdr">'+
-    '<div><div class="inv-logo">AUTO <span>H&amp;R</span></div>'+
-    '<div style="font-size:11px;color:#64748b;margin-top:2px">Calle Sant Isidre 85, Gava (Barcelona)</div></div>'+
-    '<div style="text-align:right">'+
-    '<div style="font-size:14px;font-weight:700;color:var(--blue)">FACTURA</div>'+
-    '<div style="font-size:12px;font-weight:600">'+(f.num||'S/N')+'</div>'+
-    '<div style="font-size:11px;color:#64748b">'+(f.fecha||'')+'</div></div></div>'+
-    '<div style="margin-bottom:10px">'+
-    '<div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:3px">CLIENTE</div>'+
-    '<div style="font-size:13px;font-weight:600">'+escH(f.cliente||'--')+'</div>'+
-    (f.matricula ? '<div style="font-size:12px;color:#64748b">Matricula: '+escH(f.matricula)+'</div>' : '')+
+      '<div>'+
+        '<div style="font-size:15px;font-weight:800;color:#0f172a">'+escH(nomEmp)+'</div>'+
+        '<div style="font-size:10px;color:#64748b;margin-top:1px">'+escH(reg)+'</div>'+
+        '<div style="font-size:10px;color:#64748b">NIF: '+escH(nif)+'</div>'+
+        '<div style="font-size:10px;color:#64748b">'+escH(dir)+'</div>'+
+        (tel?'<div style="font-size:10px;color:#64748b">Tel: '+escH(tel)+'</div>':'')+
+        (email?'<div style="font-size:10px;color:#64748b">'+escH(email)+'</div>':'')+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:16px;font-weight:700;color:#2563eb">FACTURA</div>'+
+        '<div style="font-size:12px;font-weight:600">Num: '+(f.num||'S/N')+'</div>'+
+        '<div style="font-size:11px;color:#64748b">Fecha: '+(f.fecha||'')+'</div>'+
+      '</div>'+
     '</div>'+
-    '<table class="inv-tbl"><thead><tr><th>Concepto</th><th style="text-align:right">Importe</th></tr></thead>'+
-    '<tbody><tr><td>'+escH(f.concepto||'Servicio de taller')+'</td><td style="text-align:right">'+eur(f.base)+'</td></tr></tbody></table>'+
-    '<div class="inv-tot"><div style="font-size:12px;text-align:right">'+
-    '<div>Base imponible: '+eur(f.base)+'</div>'+
-    '<div>IVA (21%): '+eur(f.iva)+'</div>'+
-    '<div style="font-size:15px;border-top:1px solid #0f172a;margin-top:5px;padding-top:5px">TOTAL: '+eur(f.total)+'</div>'+
-    '</div></div>'+
-    '<div style="margin-top:12px;font-size:11px;color:#64748b">'+
-    '<div>Forma de pago: '+escH(f.pago||'--')+'</div>'+
-    '<div>Estado: '+(f.estado==='Cobrado'?'Cobrado':'Pendiente')+'</div></div></div>';
+    '<div style="margin-bottom:10px">'+
+      '<div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:3px;text-transform:uppercase">Cliente</div>'+
+      '<div style="font-size:13px;font-weight:600">'+escH(f.cliente||'--')+'</div>'+
+      (f.matricula?'<div style="font-size:11px;color:#64748b">Vehiculo: '+escH(f.matricula)+'</div>':'')+
+    '</div>'+
+    '<table class="inv-tbl"><thead><tr><th>Concepto / Trabajo</th><th style="text-align:right">Importe</th></tr></thead>'+
+    '<tbody><tr>'+
+      '<td>'+escH(f.concepto||'Servicio de taller mecanico')+'</td>'+
+      '<td style="text-align:right">'+eur(f.base)+'</td>'+
+    '</tr></tbody></table>'+
+    '<div style="text-align:right;margin-top:8px;font-size:12px">'+
+      '<div>Base imponible: '+eur(f.base)+'</div>'+
+      '<div>IVA (21%): '+eur(f.iva)+'</div>'+
+      '<div style="font-size:16px;font-weight:800;border-top:2px solid #0f172a;margin-top:6px;padding-top:6px;color:#0f172a">TOTAL: '+eur(f.total)+'</div>'+
+    '</div>'+
+    '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0">'+
+      '<div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase">Datos de pago</div>'+
+      '<div style="font-size:11px;color:#334155"><b>'+escH(banco)+'</b> - '+escH(titular)+'</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#0f172a;font-family:monospace;letter-spacing:1px;margin-top:3px">'+escH(iban)+'</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:6px">'+
+        'Forma de pago: '+escH(f.pago||'--')+
+        ' &nbsp;|&nbsp; Estado: <b>'+(f.estado==='Cobrado'?'COBRADO':'PENDIENTE DE COBRO')+'</b>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
 }
 
 function buildProvHTML(p){
+  var pr2 = SD.perfil||{};
+  var nomEmp2 = pr2.nombre||'Ali Eduardo Rebolledo Lozada';
+  var dir2 = pr2.direccion||'Calle Sant Isidre 85, Gava (Barcelona)';
   return '<div class="inv">'+
     '<div class="inv-hdr">'+
-    '<div><div class="inv-logo">AUTO <span>H&amp;R</span></div>'+
-    '<div style="font-size:11px;color:#64748b">Calle Sant Isidre 85, Gava (Barcelona)</div></div>'+
+    '<div>'+
+    '<div style="font-size:14px;font-weight:800">'+escH(nomEmp2)+'</div>'+
+    '<div style="font-size:10px;color:#64748b">'+escH(dir2)+'</div>'+
+    '</div>'+
     '<div style="text-align:right">'+
     '<div style="font-size:14px;font-weight:700;color:var(--orange)">COMPRA</div>'+
     '<div style="font-size:12px;font-weight:600">'+(p.num||'S/N')+'</div>'+
@@ -1563,6 +1658,39 @@ function doPrint(){
 // ============================================================
 // EXPORT
 // ============================================================
+
+// ============================================================
+// PERFIL FISCAL
+// ============================================================
+function loadPerfil(){
+  var p = SD.perfil||{};
+  var set = function(id, val){ var el=g(id); if(el) el.value=val||''; };
+  set('prf-nombre', p.nombre);
+  set('prf-nif', p.nif);
+  set('prf-regimen', p.regimen);
+  set('prf-dir', p.direccion);
+  set('prf-email', p.email);
+  set('prf-tel', p.telefono);
+  set('prf-iban', p.iban);
+  set('prf-banco', p.banco);
+  set('prf-titular', p.titular_cuenta);
+}
+
+async function savePerfil(showToast){
+  var get = function(id){ var el=g(id); return el?el.value.trim():''; };
+  SD.perfil = SD.perfil||{};
+  SD.perfil.nombre = get('prf-nombre');
+  SD.perfil.nif = get('prf-nif');
+  SD.perfil.regimen = get('prf-regimen');
+  SD.perfil.direccion = get('prf-dir');
+  SD.perfil.email = get('prf-email');
+  SD.perfil.telefono = get('prf-tel');
+  SD.perfil.iban = get('prf-iban');
+  SD.perfil.banco = get('prf-banco');
+  SD.perfil.titular_cuenta = get('prf-titular');
+  if(showToast){ toast('Datos guardados y sincronizados'); await cloudPut(); }
+}
+
 async function testConexion(){
   if(!BIN||!KEY){ toast('Introduce Bin ID y API Key primero'); return; }
   toast('Probando conexion...');
