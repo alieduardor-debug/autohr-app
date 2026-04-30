@@ -336,16 +336,36 @@ textarea{resize:vertical;min-height:60px}
 <div class="mbg" id="mf">
   <div class="sheet">
     <div class="sh"></div>
-    <div class="stit" id="mf-tit">Nueva Factura de Ingreso</div>
+    <div class="stit" id="mf-tit">Nueva Factura / Albaran</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="fl">Tipo de registro</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button type="button" id="tipo-factura-btn" onclick="setTipoFact('factura')"
+          style="padding:10px;border-radius:10px;border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          Factura
+        </button>
+        <button type="button" id="tipo-albaran-btn" onclick="setTipoFact('albaran')"
+          style="padding:10px;border-radius:10px;border:2px solid var(--border2);background:var(--card);color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
+          Albaran / Ticket
+        </button>
+      </div>
+      <div id="tipo-info" style="margin-top:7px;font-size:11px;color:var(--blue);background:#eff6ff;border-radius:7px;padding:6px 10px">
+        Con numero de factura y desglose de IVA
+      </div>
+    </div>
+    <input type="hidden" id="mf-tipo" value="factura">
     <div class="fg"><label class="fl">Mes</label><select id="mf-mes"></select></div>
     <div class="g2">
-      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mf-fecha"></div>
-      <div class="fg"><label class="fl">N Factura</label><input type="text" id="mf-num" placeholder="Auto"></div>
+      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mf-fecha" onchange="actualizarNumFact()"></div>
+      <div class="fg"><label class="fl">N Factura <span id="mf-num-hint" style="font-weight:400;color:var(--blue);font-size:10px"></span></label><input type="text" id="mf-num" placeholder="Auto" oninput="checkDupFact()"></div>
     </div>
-    <div class="fg"><label class="fl">Cliente</label><input type="text" id="mf-cli" placeholder="Nombre cliente"></div>
+    <div class="fg"><label class="fl">Cliente</label><input type="text" id="mf-cli" placeholder="Nombre cliente" oninput="checkDupFact()"></div>
     <div class="fg"><label class="fl">Matricula</label><input type="text" id="mf-mat" placeholder="1234ABC"></div>
-    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF()"></div>
-    <div class="g2">
+    <div class="fg" id="mf-base-wrap">
+      <label class="fl" id="mf-base-lbl">Base Imponible (sin IVA)</label>
+      <input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF();checkDupFact()">
+    </div>
+    <div class="g2" id="mf-iva-wrap">
       <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mf-iva" step="0.01" readonly placeholder="Auto"></div>
       <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mf-tot" step="0.01" readonly placeholder="Auto"></div>
     </div>
@@ -358,8 +378,9 @@ textarea{resize:vertical;min-height:60px}
         <select id="mf-est"><option value="Cobrado">Cobrado</option><option value="Pendiente">Pendiente</option></select>
       </div>
     </div>
+    <div id="mf-dup-warn" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:#78350f"></div>
     <input type="hidden" id="mf-id">
-    <button class="btn bp" onclick="saveFact()">Guardar Factura</button>
+    <button class="btn bp" id="mf-save-btn" onclick="saveFact()">Guardar Factura</button>
     <button class="btn" onclick="closeFact()">Cancelar</button>
   </div>
 </div>
@@ -372,13 +393,13 @@ textarea{resize:vertical;min-height:60px}
     <div class="fg"><label class="fl">Mes</label><select id="mp-mes"></select></div>
     <div class="g2">
       <div class="fg"><label class="fl">Fecha</label><input type="date" id="mp-fecha"></div>
-      <div class="fg"><label class="fl">N Factura Prov.</label><input type="text" id="mp-num" placeholder="FAB26..."></div>
+      <div class="fg"><label class="fl">N Factura Prov.</label><input type="text" id="mp-num" placeholder="FAB26..." oninput="checkDupProv()"></div>
     </div>
     <div class="fg"><label class="fl">Proveedor</label>
-      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner...">
+      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner..." oninput="checkDupProv()">
       <datalist id="prov-dl"><option value="Adbosch"><option value="Berner"><option value="Otro"></datalist>
     </div>
-    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mp-base" step="0.01" placeholder="0.00" oninput="calcP()"></div>
+    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mp-base" step="0.01" placeholder="0.00" oninput="calcP();checkDupProv()"></div>
     <div class="g2">
       <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mp-iva" step="0.01" readonly placeholder="Auto"></div>
       <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mp-tot" step="0.01" readonly placeholder="Auto"></div>
@@ -387,8 +408,9 @@ textarea{resize:vertical;min-height:60px}
     <div class="fg"><label class="fl">Estado</label>
       <select id="mp-est"><option value="Pagado">Pagado</option><option value="Pendiente">Pendiente</option></select>
     </div>
+    <div id="mp-dup-warn" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:#78350f"></div>
     <input type="hidden" id="mp-id">
-    <button class="btn bp" onclick="saveProv()">Guardar</button>
+    <button class="btn bp" id="mp-save-btn" onclick="saveProv()">Guardar</button>
     <button class="btn" onclick="closeProv()">Cancelar</button>
   </div>
 </div>
@@ -599,7 +621,7 @@ var SD = {
     {id:'gv14',mes:'Dic-25',fecha:'2025-12-01',num:'25-2641',prov:'Asemar',concepto:'Gestoria Diciembre 2025',importe:60.5,pago:'Transferencia'},
     {id:'gv15',mes:'Dic-25',fecha:'2025-12-01',num:'2100',prov:'Zaballos',concepto:'Asesoria Nov-Dic 2025',importe:153.23,pago:'Transferencia'}
   ],
-  numNext: 68,
+  numNext: 57,
   actividad: [],
   perfil: {
     nombre: 'Ali Eduardo Rebolledo Lozada',
@@ -971,8 +993,9 @@ function renderFacts(){
   }
 
   g('f-list').innerHTML = list.map(function(f){
-    var estCls = f.estado==='Cobrado' ? 'cg' : 'ca';
-    var estTxt = f.estado==='Cobrado' ? 'Cobrado' : 'Pendiente';
+    var esAlbaran = f.tipo === 'albaran';
+    var estCls = esAlbaran ? 'cv' : (f.estado==='Cobrado' ? 'cg' : 'ca');
+    var estTxt = esAlbaran ? 'Albaran' : (f.estado==='Cobrado' ? 'Cobrado' : 'Pendiente');
     var sub = (f.fecha||'') + (f.num ? ' - Fac#'+f.num : '');
     var conc = f.concepto ? '<div class="rw-sub" style="font-style:italic">'+(f.concepto.length>55?f.concepto.slice(0,55)+'...':escH(f.concepto))+'</div>' : '';
     var acts =
@@ -1380,24 +1403,288 @@ function logActividad(accion, tipo, detalle){
   if(SD.actividad.length > 100) SD.actividad = SD.actividad.slice(0,100);
 }
 
+
+
+// ============================================================
+// NUMERACION AUTOMATICA DE FACTURAS
+// ============================================================
+function getNextNumSeq(){
+  // Buscar el mayor numero secuencial (3 ultimos digitos) en todas las facturas
+  var maxSeqFacts = 56; // ultima conocida es 056
+  SD.facturas.forEach(function(f){
+    if(f.num && f.num.length >= 3){
+      var seq = parseInt(f.num.slice(-3), 10);
+      if(!isNaN(seq) && seq > maxSeqFacts) maxSeqFacts = seq;
+    }
+  });
+  // numNext ya representa el PROXIMO a usar (no el ultimo)
+  // Devolver el mayor entre numNext y maxSeqFacts+1
+  return Math.max(SD.numNext, maxSeqFacts + 1);
+}
+
+function generarNumFact(fecha){
+  // Formato: DDMMAA + NNN (3 digitos con cero a la izquierda)
+  // Ejemplo: 070426056 = dia 07, mes 04, ano 26, secuencial 056
+  var d = fecha ? new Date(fecha) : new Date();
+  var dd  = d.getDate().toString().padStart(2,'0');
+  var mm  = (d.getMonth()+1).toString().padStart(2,'0');
+  var aa  = d.getFullYear().toString().slice(-2);
+  var seq = getNextNumSeq();
+  var nnn = seq.toString().padStart(3,'0');
+  return dd + mm + aa + nnn;
+}
+
+
+function setTipoFact(tipo){
+  g('mf-tipo').value = tipo;
+  var btnF = g('tipo-factura-btn');
+  var btnA = g('tipo-albaran-btn');
+  var info = g('tipo-info');
+  var numWrap  = g('mf-num') ? g('mf-num').closest ? null : null : null;
+  var numHint  = g('mf-num-hint');
+  var numInput = g('mf-num');
+  var ivaWrap  = g('mf-iva-wrap');
+  var baseLbl  = g('mf-base-lbl');
+  var saveBtn  = g('mf-save-btn');
+
+  if(tipo === 'factura'){
+    btnF.style.background = 'var(--blue)';
+    btnF.style.borderColor = 'var(--blue)';
+    btnF.style.color = '#fff';
+    btnA.style.background = 'var(--card)';
+    btnA.style.borderColor = 'var(--border2)';
+    btnA.style.color = 'var(--t2)';
+    info.style.background = '#eff6ff';
+    info.style.color = 'var(--blue)';
+    info.textContent = 'Con numero de factura y desglose de IVA';
+    if(ivaWrap) ivaWrap.style.display = '';
+    if(baseLbl) baseLbl.textContent = 'Base Imponible (sin IVA)';
+    if(numInput) numInput.placeholder = 'Auto';
+    if(numHint) numHint.style.display = '';
+    if(saveBtn) saveBtn.textContent = 'Guardar Factura';
+    // Generar numero automatico
+    actualizarNumFact();
+  } else {
+    btnA.style.background = '#7c3aed';
+    btnA.style.borderColor = '#7c3aed';
+    btnA.style.color = '#fff';
+    btnF.style.background = 'var(--card)';
+    btnF.style.borderColor = 'var(--border2)';
+    btnF.style.color = 'var(--t2)';
+    info.style.background = '#faf5ff';
+    info.style.color = '#7c3aed';
+    info.textContent = 'Sin numero de factura. Solo registro interno del trabajo.';
+    if(ivaWrap) ivaWrap.style.display = 'none';
+    if(baseLbl) baseLbl.textContent = 'Importe cobrado (total)';
+    if(numInput){ numInput.value = ''; numInput.placeholder = 'Sin numero (opcional ref.)'; }
+    if(numHint) numHint.style.display = 'none';
+    // Limpiar IVA
+    var ivaEl = g('mf-iva'); if(ivaEl) ivaEl.value = '0.00';
+    var totEl = g('mf-tot'); if(totEl) totEl.value = '';
+    if(saveBtn) saveBtn.textContent = 'Guardar Albaran';
+  }
+  checkDupFact();
+}
+
+function actualizarNumFact(){
+  // Se llama cuando cambia la fecha para actualizar el numero sugerido
+  var fechaEl = g('mf-fecha');
+  var numEl   = g('mf-num');
+  var eid     = g('mf-id').value;
+  if(!numEl || eid) return; // no sobreescribir si es edicion
+  var sugerido = generarNumFact(fechaEl ? fechaEl.value : null);
+  numEl.value = sugerido;
+  checkDupFact();
+}
+
+// ============================================================
+// DETECCION DE DUPLICADOS
+// ============================================================
+function checkDupFact(){
+  var warn = g('mf-dup-warn');
+  var btn  = g('mf-save-btn');
+  if(!warn) return;
+
+  var eid    = g('mf-id').value;
+  var num    = (g('mf-num').value||'').trim().toLowerCase();
+  var cli    = (g('mf-cli').value||'').trim().toLowerCase();
+  var base   = parseFloat(g('mf-base').value)||0;
+  var fecha  = (g('mf-fecha').value||'').trim();
+  var duplicados = [];
+
+  SD.facturas.forEach(function(f){
+    if(f.id === eid) return; // ignorar el registro que se esta editando
+
+    var coincideNum   = num && f.num && f.num.toLowerCase() === num;
+    var coincideBase  = base>0 && Math.abs(Number(f.base||0)-base)<0.02;
+    var coincideCli   = cli && (f.cliente||'').toLowerCase() === cli;
+    var coincideFecha = fecha && f.fecha === fecha;
+
+    if(coincideNum){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Numero de factura duplicado: <b>' + escH(f.num) + '</b>',
+        detalle: (f.cliente||'') + ' &bull; ' + f.fecha + ' &bull; ' + eur(f.base) + ' base'
+      });
+    } else if(coincideBase && coincideCli && coincideFecha){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Misma fecha, cliente e importe',
+        detalle: (f.cliente||'') + ' &bull; ' + f.fecha + ' &bull; ' + eur(f.base) + (f.num?' &bull; Fac#'+f.num:'')
+      });
+    } else if(coincideBase && coincideCli){
+      duplicados.push({
+        nivel: 'medio',
+        motivo: 'Mismo cliente e importe en otro mes',
+        detalle: (f.cliente||'') + ' &bull; ' + (f.mes||'') + ' &bull; ' + eur(f.base)
+      });
+    } else if(coincideNum === false && coincideBase && coincideFecha){
+      duplicados.push({
+        nivel: 'bajo',
+        motivo: 'Mismo importe y fecha con otro cliente',
+        detalle: (f.cliente||'-') + ' &bull; ' + f.fecha + ' &bull; ' + eur(f.base)
+      });
+    }
+  });
+
+  if(!duplicados.length){
+    warn.style.display = 'none';
+    if(btn){ btn.style.background='var(--blue)'; btn.textContent='Guardar Factura'; }
+    return;
+  }
+
+  // Ordenar por nivel
+  duplicados.sort(function(a,b){ return a.nivel==='alto'?-1:b.nivel==='alto'?1:0; });
+  var html2 = '';
+  duplicados.forEach(function(d){
+    var ic = d.nivel==='alto' ? '&#128721;' : d.nivel==='medio' ? '&#9888;&#65039;' : '&#8505;&#65039;';
+    html2 += '<div style="margin-bottom:6px"><b>'+ic+' '+d.motivo+'</b><br><span style="color:#92400e">'+d.detalle+'</span></div>';
+  });
+
+  var hayAlto = duplicados.some(function(d){ return d.nivel==='alto'; });
+  warn.innerHTML = '<b style="font-size:13px">&#128721; Posible duplicado detectado</b><br><br>' + html2 +
+    (hayAlto
+      ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f59e0b">Revisa bien antes de guardar. Puedes continuar si es correcto.</div>'
+      : '');
+  warn.style.display = 'block';
+
+  if(btn){
+    if(hayAlto){
+      btn.style.background = '#d97706';
+      btn.textContent = 'Guardar igualmente (posible duplicado)';
+    } else {
+      btn.style.background = '#2563eb';
+      btn.textContent = 'Guardar Factura';
+    }
+  }
+}
+
+function checkDupProv(){
+  var warn = g('mp-dup-warn');
+  var btn  = g('mp-save-btn');
+  if(!warn) return;
+
+  var eid    = g('mp-id').value;
+  var num    = (g('mp-num').value||'').trim().toLowerCase();
+  var prov   = (g('mp-prov').value||'').trim().toLowerCase();
+  var base   = parseFloat(g('mp-base').value)||0;
+  var fecha  = (g('mp-fecha').value||'').trim();
+  var duplicados = [];
+
+  SD.proveedores.forEach(function(p){
+    if(p.id === eid) return;
+
+    var coincideNum  = num && p.num && p.num.toLowerCase() === num;
+    var coincideBase = base!==0 && Math.abs(Number(p.base||0)-base)<0.02;
+    var coincideProv = prov && (p.proveedor||'').toLowerCase() === prov;
+    var coincideFecha= fecha && p.fecha === fecha;
+
+    if(coincideNum && coincideProv){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Numero de factura duplicado: <b>' + escH(p.num) + '</b> de ' + escH(p.proveedor||''),
+        detalle: (p.proveedor||'') + ' &bull; ' + p.fecha + ' &bull; ' + eur(p.base) + ' base'
+      });
+    } else if(coincideNum){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Numero de factura ya existe: <b>' + escH(p.num) + '</b>',
+        detalle: (p.proveedor||'') + ' &bull; ' + p.fecha + ' &bull; ' + eur(p.base) + ' base'
+      });
+    } else if(coincideBase && coincideProv && coincideFecha){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Mismo proveedor, fecha e importe',
+        detalle: (p.proveedor||'') + ' &bull; ' + p.fecha + ' &bull; ' + eur(p.base)
+      });
+    } else if(coincideBase && coincideProv){
+      duplicados.push({
+        nivel: 'medio',
+        motivo: 'Mismo proveedor e importe en otro mes',
+        detalle: (p.proveedor||'') + ' &bull; ' + (p.mes||'') + ' &bull; ' + eur(p.base)
+      });
+    }
+  });
+
+  if(!duplicados.length){
+    warn.style.display = 'none';
+    if(btn){ btn.style.background='var(--blue)'; btn.textContent='Guardar'; }
+    return;
+  }
+
+  duplicados.sort(function(a,b){ return a.nivel==='alto'?-1:b.nivel==='alto'?1:0; });
+  var html2 = '';
+  duplicados.forEach(function(d){
+    var ic = d.nivel==='alto' ? '&#128721;' : '&#9888;&#65039;';
+    html2 += '<div style="margin-bottom:6px"><b>'+ic+' '+d.motivo+'</b><br><span style="color:#92400e">'+d.detalle+'</span></div>';
+  });
+
+  var hayAlto = duplicados.some(function(d){ return d.nivel==='alto'; });
+  warn.innerHTML = '<b style="font-size:13px">&#128721; Posible duplicado detectado</b><br><br>' + html2 +
+    (hayAlto ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f59e0b">Revisa antes de guardar. Puedes continuar si es correcto.</div>' : '');
+  warn.style.display = 'block';
+
+  if(btn){
+    btn.style.background = hayAlto ? '#d97706' : '#2563eb';
+    btn.textContent = hayAlto ? 'Guardar igualmente (posible duplicado)' : 'Guardar';
+  }
+}
+
 // ============================================================
 // FACTURA CRUD
 // ============================================================
 function calcF(){
   var b = parseFloat(g('mf-base').value)||0;
-  var iv = Math.round(b*21)/100;
-  g('mf-iva').value = iv.toFixed(2);
-  g('mf-tot').value = (b+iv).toFixed(2);
+  var tipo = g('mf-tipo') ? g('mf-tipo').value : 'factura';
+  if(tipo === 'albaran'){
+    // Para albaran: el importe es el total, sin IVA
+    var ivaEl = g('mf-iva'); if(ivaEl) ivaEl.value = '0.00';
+    var totEl = g('mf-tot'); if(totEl) totEl.value = b.toFixed(2);
+  } else {
+    var iv = Math.round(b*21)/100;
+    g('mf-iva').value = iv.toFixed(2);
+    g('mf-tot').value = (b+iv).toFixed(2);
+  }
 }
 
 function openFact(){
   g('mf-tit').textContent='Nueva Factura de Ingreso';
   g('mf-id').value='';
-  g('mf-fecha').value=new Date().toISOString().slice(0,10);
+  var dw=g('mf-dup-warn'); if(dw){dw.style.display='none';}
+  var sb=g('mf-save-btn'); if(sb){sb.style.background='var(--blue)';sb.textContent='Guardar Factura';}
+  var hoy = new Date().toISOString().slice(0,10);
+  g('mf-fecha').value=hoy;
+  setTimeout(function(){
+    actualizarNumFact();
+    var hint=g('mf-num-hint');
+    if(hint){ var seq=getNextNumSeq(); hint.textContent='(secuencial: '+seq.toString().padStart(3,'0')+')'; }
+  }, 50);
   g('mf-num').value=''; g('mf-cli').value=''; g('mf-mat').value='';
   g('mf-base').value=''; g('mf-iva').value=''; g('mf-tot').value='';
   g('mf-conc').value=''; g('mf-pago').value='Transferencia'; g('mf-est').value='Cobrado';
   g('mf-mes').value=curFT;
+  var tipoEl=g('mf-tipo'); if(tipoEl) tipoEl.value='factura';
+  setTipoFact('factura');
   g('mf').classList.add('on');
 }
 function closeFact(){ g('mf').classList.remove('on'); }
@@ -1411,20 +1698,27 @@ function editFact(id){
   g('mf-base').value=f.base||''; g('mf-iva').value=f.iva||''; g('mf-tot').value=f.total||'';
   g('mf-conc').value=f.concepto||''; g('mf-pago').value=f.pago||'Transferencia';
   g('mf-est').value=f.estado||'Cobrado';
+  var tipoEdit = f.tipo||'factura';
+  var tipoElE=g('mf-tipo'); if(tipoElE) tipoElE.value=tipoEdit;
+  setTipoFact(tipoEdit);
   g('mf').classList.add('on');
+  var hintE=g('mf-num-hint'); if(hintE) hintE.textContent='(editando)';
+  setTimeout(checkDupFact, 100);
 }
 
 async function saveFact(){
   var base = parseFloat(g('mf-base').value)||0;
   if(!base){ toast('Introduce la base imponible'); return; }
-  var iva = Math.round(base*2100)/100/100;
+  var tipo = (g('mf-tipo') ? g('mf-tipo').value : 'factura') || 'factura';
+  var iva = tipo === 'albaran' ? 0 : Math.round(base*2100)/100/100;
   var eid = g('mf-id').value;
   var existente = eid ? SD.facturas.find(function(x){ return x.id===eid; }) : null;
   var obj = {
     id: eid||uid(), mes:g('mf-mes').value,
-    fecha:g('mf-fecha').value, num:g('mf-num').value||('F'+SD.numNext),
+    fecha:g('mf-fecha').value, num: tipo==='albaran' ? (g('mf-num').value||'') : (g('mf-num').value||generarNumFact(g('mf-fecha').value)),
     cliente:g('mf-cli').value, matricula:g('mf-mat').value,
     base:base, iva:iva, total:base+iva,
+    tipo:tipo,
     concepto:g('mf-conc').value, pago:g('mf-pago').value, estado:g('mf-est').value,
     creadoPor: existente ? (existente.creadoPor||USER) : USER,
     creadoEn:  existente ? (existente.creadoEn||nowStr()) : nowStr(),
@@ -1432,7 +1726,12 @@ async function saveFact(){
     editadoEn:  eid ? nowStr() : null
   };
   if(eid){ var i=SD.facturas.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.facturas[i]=obj; }
-  else { SD.facturas.push(obj); SD.numNext++; }
+  else {
+    SD.facturas.push(obj);
+    // Actualizar numNext con el secuencial real
+    var seqGuardado = obj.num ? parseInt(obj.num.slice(-3),10) : 0;
+    if(seqGuardado > SD.numNext) SD.numNext = seqGuardado;
+  }
   logActividad(eid?'editar':'crear','factura', (obj.cliente||'-')+' '+eur(obj.total));
   closeFact(); toast(eid?'Factura actualizada por '+USER:'Factura creada por '+USER); renderFacts();
   await cloudPut();
@@ -1458,7 +1757,9 @@ function calcP(){
 
 function openProv(){
   g('mp-tit').textContent='Nueva Compra Proveedor';
-  g('mp-id').value=''; g('mp-fecha').value=new Date().toISOString().slice(0,10);
+  g('mp-id').value=''; var dw2=g('mp-dup-warn'); if(dw2){dw2.style.display='none';}
+  var sb2=g('mp-save-btn'); if(sb2){sb2.style.background='var(--blue)';sb2.textContent='Guardar';}
+  g('mp-fecha').value=new Date().toISOString().slice(0,10);
   g('mp-num').value=''; g('mp-prov').value='';
   g('mp-base').value=''; g('mp-iva').value=''; g('mp-tot').value='';
   g('mp-conc').value=''; g('mp-est').value='Pagado'; g('mp-mes').value=curPT;
@@ -1607,6 +1908,7 @@ function buildInvHTML(f){
   var titular = pr.titular_cuenta||'Ali Eduardo Rebolledo Lozada';
   var email = pr.email||'';
   var tel = pr.telefono||'';
+  var esAlb = f.tipo === 'albaran';
   return '<div class="inv">'+
     '<div class="inv-hdr">'+
       '<div>'+
@@ -1618,8 +1920,8 @@ function buildInvHTML(f){
         (email?'<div style="font-size:10px;color:#64748b">'+escH(email)+'</div>':'')+
       '</div>'+
       '<div style="text-align:right">'+
-        '<div style="font-size:16px;font-weight:700;color:#2563eb">FACTURA</div>'+
-        '<div style="font-size:12px;font-weight:600">Num: '+(f.num||'S/N')+'</div>'+
+        '<div style="font-size:16px;font-weight:700;color:'+(esAlb?'#7c3aed':'#2563eb')+'">'+( esAlb ? 'ALBARAN DE TRABAJO' : 'FACTURA' )+'</div>'+
+        (f.num ? '<div style="font-size:12px;font-weight:600">Num: '+f.num+'</div>' : (esAlb ? '<div style="font-size:11px;color:#7c3aed">Registro interno</div>' : '<div style="font-size:12px;font-weight:600">S/N</div>'))+
         '<div style="font-size:11px;color:#64748b">Fecha: '+(f.fecha||'')+'</div>'+
       '</div>'+
     '</div>'+
@@ -1635,7 +1937,7 @@ function buildInvHTML(f){
     '</tr></tbody></table>'+
     '<div style="text-align:right;margin-top:8px;font-size:12px">'+
       '<div>Base imponible: '+eur(f.base)+'</div>'+
-      '<div>IVA (21%): '+eur(f.iva)+'</div>'+
+      (esAlb ? '' : '<div>IVA (21%): '+eur(f.iva)+'</div>')+
       '<div style="font-size:16px;font-weight:800;border-top:2px solid #0f172a;margin-top:6px;padding-top:6px;color:#0f172a">TOTAL: '+eur(f.total)+'</div>'+
     '</div>'+
     '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0">'+
