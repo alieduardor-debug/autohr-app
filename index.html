@@ -707,7 +707,22 @@ async function cloudGet(){
       else { needsPush=true; }
       if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos=d.gastosFijos;
       if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables=d.gastosVariables;
-      if(d.numNext && d.numNext>SD.numNext) SD.numNext=d.numNext;
+      // numNext del servidor: solo usar si es coherente con los numeros reales de factura
+      // Calcular el max secuencial de las facturas que se van a cargar
+      if(d.numNext){
+        var factsParaCalc = (d.facturas && d.facturas.length) ? d.facturas : SD.facturas;
+        var maxSeqServer = 56;
+        factsParaCalc.forEach(function(f){
+          if(f.num && f.num.length>=3){
+            var sq = parseInt(f.num.slice(-3),10);
+            if(!isNaN(sq) && sq>maxSeqServer) maxSeqServer=sq;
+          }
+        });
+        // El numNext correcto es el mayor entre el secuencial+1 y lo guardado en servidor
+        // pero NUNCA superior a maxSeqServer+1 si el servidor tiene un valor inflado
+        var numNextCorrecto = maxSeqServer + 1;
+        SD.numNext = Math.max(numNextCorrecto, 57); // minimo 57 siempre
+      }
       if(d.perfil) SD.perfil=Object.assign({},SD.perfil,d.perfil);
       if(d.actividad) SD.actividad=d.actividad;
     } else { needsPush=true; }
@@ -1729,8 +1744,9 @@ async function saveFact(){
   else {
     SD.facturas.push(obj);
     // Actualizar numNext con el secuencial real
+    // Actualizar numNext al mayor secuencial usado + 1
     var seqGuardado = obj.num ? parseInt(obj.num.slice(-3),10) : 0;
-    if(seqGuardado > SD.numNext) SD.numNext = seqGuardado;
+    if(seqGuardado >= SD.numNext) SD.numNext = seqGuardado + 1;
   }
   logActividad(eid?'editar':'crear','factura', (obj.cliente||'-')+' '+eur(obj.total));
   closeFact(); toast(eid?'Factura actualizada por '+USER:'Factura creada por '+USER); renderFacts();
