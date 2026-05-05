@@ -1158,14 +1158,46 @@ function renderGastos(){
 // ============================================================
 // TESORERIA
 // ============================================================
+function mesDeVencimiento(p){
+  // Calcula el mes (en formato 'Ene-26') en que vence la factura del proveedor
+  // Adbosch: dia 10 del mes siguiente a la fecha de emision
+  // Berner:  al mes exacto de la fecha de emision (30 dias aprox)
+  // Otros:   mes siguiente (igual que Berner)
+  var fecha = p.fecha || '';
+  if(!fecha) return null;
+  var d = new Date(fecha);
+  if(isNaN(d.getTime())) return null;
+  var prov = (p.proveedor||'').toLowerCase();
+  var mesVenc, annoVenc;
+  if(prov.indexOf('adbosch') >= 0){
+    // Dia 10 del mes siguiente
+    d.setMonth(d.getMonth() + 1);
+    mesVenc = d.getMonth(); // 0-11
+    annoVenc = d.getFullYear();
+  } else {
+    // Berner y otros: al mes de la fecha (mes siguiente)
+    d.setMonth(d.getMonth() + 1);
+    mesVenc = d.getMonth();
+    annoVenc = d.getFullYear();
+  }
+  // Convertir a formato 'Ene-26'
+  var nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return nombres[mesVenc] + '-' + String(annoVenc).slice(-2);
+}
+
+function diaVencimiento(p){
+  var prov = (p.proveedor||'').toLowerCase();
+  if(prov.indexOf('adbosch') >= 0) return 'dia 10';
+  return 'al mes';
+}
+
 function renderTesoreria(){
   var tet = g('tes-tabs');
   if(!tet) return;
 
   var m = curTET;
   var idx = MESES_I.indexOf(m);
-  var mAnt = idx>0 ? MESES_I[idx-1] : null; // mes anterior (proveedores vencen)
-  var mSig = idx<MESES_I.length-1 ? MESES_I[idx+1] : null; // mes siguiente
+  var mSig = idx<MESES_I.length-1 ? MESES_I[idx+1] : null;
 
   // Ingresos del mes seleccionado
   var facs = SD.facturas.filter(function(f){ return f.mes===m; });
@@ -1174,13 +1206,20 @@ function renderTesoreria(){
   var ingPendiente = facs.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
   var ivaRepercutido = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.iva||0); },0);
 
-  // Proveedores del mes anterior (vencen este mes - 30 dias)
-  var provsAnt = mAnt ? SD.proveedores.filter(function(p){ return p.mes===mAnt; }) : [];
-  var pagarProvs = provsAnt.reduce(function(a,p){ return a+Number(p.total||0); },0); // total c/IVA
+  // Proveedores que vencen ESTE MES (calculado por regla real de cada proveedor)
+  var provsVencenEste = SD.proveedores.filter(function(p){
+    return mesDeVencimiento(p) === m;
+  });
+  var pagarProvs = provsVencenEste.reduce(function(a,p){ return a+Number(p.total||0); },0);
 
-  // Proveedores del mes actual (vencen el mes que viene)
+  // Proveedores que vencen EL MES SIGUIENTE
+  var provsVencenSig = mSig ? SD.proveedores.filter(function(p){
+    return mesDeVencimiento(p) === mSig;
+  }) : [];
+  var pagarProvsSig = provsVencenSig.reduce(function(a,p){ return a+Number(p.total||0); },0);
+
+  // IVA soportado: facturas del mes actual (para Modelo 303)
   var provsAct = SD.proveedores.filter(function(p){ return p.mes===m; });
-  var pagarProvsSig = provsAct.reduce(function(a,p){ return a+Number(p.total||0); },0);
   var ivaSoportado = provsAct.reduce(function(a,p){ return a+Number(p.iva||0); },0);
 
   // Gastos fijos mensual
@@ -1260,14 +1299,37 @@ function renderTesoreria(){
   html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Pagos obligatorios este mes</div>';
 
   if(pagarProvs>0){
-    html += '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">Proveedores '+(mAnt||'')+ ' (vencen ahora)</div>';
-    provsAnt.forEach(function(p){
-      html += mkFilaTesoreria(p.proveedor+' '+p.num, eur(p.total), p.estado==='Pagado'?'var(--t4)':'var(--red)', false);
+    // Agrupar por proveedor para mostrar la regla de cada uno
+    var gruposVenc = {};
+    provsVencenEste.forEach(function(p){
+      var k = p.proveedor||'Otro';
+      if(!gruposVenc[k]) gruposVenc[k] = {provs:[], total:0, regla:''};
+      gruposVenc[k].provs.push(p);
+      gruposVenc[k].total += Number(p.total||0);
+      gruposVenc[k].regla = diaVencimiento(p);
     });
-    html += mkFilaTesoreria('Subtotal proveedores', eur(pagarProvs), 'var(--red)', true);
+    Object.keys(gruposVenc).forEach(function(prov){
+      var g2 = gruposVenc[prov];
+      var reglaTxt = prov.toLowerCase().indexOf('adbosch')>=0
+        ? 'Adbosch - vence dia 10 este mes'
+        : prov.toLowerCase().indexOf('berner')>=0
+        ? 'Berner - vence al mes de emision'
+        : prov + ' - vence este mes';
+      html += '<div style="font-size:11px;color:var(--t3);margin-bottom:4px;margin-top:6px">'+escH(reglaTxt)+'</div>';
+      g2.provs.forEach(function(p){
+        var emision = p.fecha ? ' (emitida '+p.fecha+')' : '';
+        var color = p.estado==='Pagado' ? 'var(--t4)' : 'var(--red)';
+        html += mkFilaTesoreria(
+          escH(p.proveedor)+' '+escH(p.num||'')+escH(emision),
+          eur(p.total), color, false
+        );
+      });
+    });
+    html += '<div style="height:4px"></div>';
+    html += mkFilaTesoreria('TOTAL A PAGAR PROVEEDORES', eur(pagarProvs), 'var(--red)', true);
     html += '<div style="height:8px"></div>';
   } else {
-    html += '<div style="font-size:12px;color:var(--t4);padding:6px 0">Sin proveedores del mes anterior</div>';
+    html += '<div style="font-size:12px;color:var(--t4);padding:6px 0">Sin vencimientos de proveedores este mes</div>';
   }
 
   html += mkFilaTesoreria('Gastos fijos mensuales', eur(gfMes), 'var(--orange)', false);
@@ -1316,15 +1378,22 @@ function renderTesoreria(){
   // -- AVISO MES SIGUIENTE --
   if(pagarProvsSig>0 && mSig){
     html += '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:12px;margin-bottom:9px">';
-    html += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">Aviso: vence en '+(ML[mSig]||mSig)+'</div>';
-    html += '<div style="font-size:12px;color:#78350f">Las facturas de proveedores de <b>'+(ML[m]||m)+'</b> vencen el mes que viene:</div>';
-    provsAct.forEach(function(p){
-      html += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:12px;color:#92400e">';
-      html += '<span>'+escH(p.proveedor)+' '+escH(p.num||'')+'</span><span style="font-weight:600">'+eur(p.total)+'</span></div>';
+    html += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px">&#9888; Reservar para '+(ML[mSig]||mSig)+'</div>';
+    provsVencenSig.forEach(function(p){
+      var esAdbosch = (p.proveedor||'').toLowerCase().indexOf('adbosch')>=0;
+      var reglaTxt = esAdbosch
+        ? 'Adbosch: emitida '+p.fecha+' -> vence dia 10/'+mSig
+        : 'Berner: emitida '+p.fecha+' -> vence al mes';
+      html += '<div style="margin-bottom:6px">';
+      html += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#92400e">';
+      html += '<span style="font-weight:600">'+escH(p.proveedor)+' '+escH(p.num||'')+'</span>';
+      html += '<span style="font-weight:700">'+eur(p.total)+'</span></div>';
+      html += '<div style="font-size:10px;color:#b45309;margin-top:1px">'+escH(reglaTxt)+'</div>';
+      html += '</div>';
     });
-    html += '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid #fcd34d">';
-    html += '<span style="font-size:12px;font-weight:700;color:#92400e">Total a reservar</span>';
-    html += '<span style="font-size:15px;font-weight:800;color:#92400e">'+eur(pagarProvsSig)+'</span></div></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #fcd34d">';
+    html += '<span style="font-size:12px;font-weight:700;color:#92400e">Total a tener en cuenta</span>';
+    html += '<span style="font-size:16px;font-weight:800;color:#92400e">'+eur(pagarProvsSig)+'</span></div></div>';
   }
 
   g('tes-body').innerHTML = html;
