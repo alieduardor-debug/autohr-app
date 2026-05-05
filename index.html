@@ -140,6 +140,15 @@ textarea{resize:vertical;min-height:60px}
 .inv-tot{margin-top:10px;border-top:2px solid var(--t1);padding-top:8px;display:flex;justify-content:flex-end}
 
 @media print{.no-print{display:none!important}}
+
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1.5px solid var(--blue);border-radius:0 0 10px 10px;z-index:300;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none}
+.autocomplete-list.open{display:block}
+.ac-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px}
+.ac-item:last-child{border-bottom:none}
+.ac-item:active{background:var(--bg)}
+.ac-item b{color:var(--blue)}
+.ac-item small{display:block;font-size:11px;color:var(--t3);margin-top:2px}
 </style>
 </head>
 <body>
@@ -359,8 +368,26 @@ textarea{resize:vertical;min-height:60px}
       <div class="fg"><label class="fl">Fecha</label><input type="date" id="mf-fecha" onchange="actualizarNumFact()"></div>
       <div class="fg"><label class="fl">N Factura <span id="mf-num-hint" style="font-weight:400;color:var(--blue);font-size:10px"></span></label><input type="text" id="mf-num" placeholder="Auto" oninput="checkDupFact()"></div>
     </div>
-    <div class="fg"><label class="fl">Cliente</label><input type="text" id="mf-cli" placeholder="Nombre cliente" oninput="checkDupFact()"></div>
-    <div class="fg"><label class="fl">Matricula</label><input type="text" id="mf-mat" placeholder="1234ABC"></div>
+    <div class="fg">
+      <label class="fl">Cliente</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="mf-cli" placeholder="Nombre o iniciales..." autocomplete="off"
+          oninput="checkDupFact();acCliente(this.value)"
+          onfocus="acCliente(this.value)"
+          onblur="setTimeout(function(){acClose('ac-cli-list')},200)">
+        <div class="autocomplete-list" id="ac-cli-list"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Matricula</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="mf-mat" placeholder="1234ABC" autocomplete="off"
+          oninput="acMatricula(this.value)"
+          onfocus="acMatricula(this.value)"
+          onblur="setTimeout(function(){acClose('ac-mat-list')},200)">
+        <div class="autocomplete-list" id="ac-mat-list"></div>
+      </div>
+    </div>
     <div class="fg" id="mf-base-wrap">
       <label class="fl" id="mf-base-lbl">Base Imponible (sin IVA)</label>
       <input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF();checkDupFact()">
@@ -988,22 +1015,27 @@ function renderDash(){
 // ============================================================
 function renderFacts(){
   var srch = (g('fsrch').value||'').toLowerCase();
-  var list = SD.facturas.filter(function(f){ return f.mes===curFT; });
-  if(srch) list = list.filter(function(f){
-    return (f.cliente||'').toLowerCase().includes(srch) ||
-           (f.matricula||'').toLowerCase().includes(srch) ||
-           (f.num||'').toLowerCase().includes(srch);
-  });
+  var modoGlobal = srch.length > 0;
+  var list = modoGlobal
+    ? SD.facturas.filter(function(f){
+        return (f.cliente||'').toLowerCase().includes(srch) ||
+               (f.matricula||'').toLowerCase().includes(srch) ||
+               (f.num||'').toLowerCase().includes(srch) ||
+               (f.concepto||'').toLowerCase().includes(srch);
+      })
+    : SD.facturas.filter(function(f){ return f.mes===curFT; });
 
   var tot = list.reduce(function(a,f){ return a+Number(f.base||0); },0);
   var cob = list.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
   var pen = list.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
 
-  g('f-sum').innerHTML = mkSumCard('Total facturado (base)', eur(tot),
-    mkChip('Cobrado '+eur(cob),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'ca') : ''));
+  var fSumLbl = modoGlobal ? 'Resultados globales ('+list.length+')' : 'Total facturado (base)';
+  g('f-sum').innerHTML = mkSumCard(fSumLbl, eur(tot),
+    mkChip('Cobrado '+eur(cob),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'ca') : '') +
+    (modoGlobal ? mkChip('Busqueda global','cv') : ''));
 
   if(!list.length){
-    g('f-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">Sin facturas en '+(ML[curFT]||curFT)+'</div>';
+    g('f-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">'+(modoGlobal?'Sin resultados para "'+srch+'"':'Sin facturas en '+(ML[curFT]||curFT))+'</div>';
     return;
   }
 
@@ -1011,7 +1043,7 @@ function renderFacts(){
     var esAlbaran = f.tipo === 'albaran';
     var estCls = esAlbaran ? 'cv' : (f.estado==='Cobrado' ? 'cg' : 'ca');
     var estTxt = esAlbaran ? 'Albaran' : (f.estado==='Cobrado' ? 'Cobrado' : 'Pendiente');
-    var sub = (f.fecha||'') + (f.num ? ' - Fac#'+f.num : '');
+    var sub = (modoGlobal?(f.mes||'')+' | ':'') + (f.fecha||'') + (f.num ? ' - Fac#'+f.num : '');
     var conc = f.concepto ? '<div class="rw-sub" style="font-style:italic">'+(f.concepto.length>55?f.concepto.slice(0,55)+'...':escH(f.concepto))+'</div>' : '';
     var acts =
       mkAct('Editar','edit','editFact(\''+f.id+'\')') +
@@ -1035,29 +1067,33 @@ function renderFacts(){
 // ============================================================
 function renderProvs(){
   var srch = (g('psrch').value||'').toLowerCase();
-  var list = SD.proveedores.filter(function(p){ return p.mes===curPT; });
-  if(srch) list = list.filter(function(p){
-    return (p.proveedor||'').toLowerCase().includes(srch) ||
-           (p.num||'').toLowerCase().includes(srch) ||
-           (p.concepto||'').toLowerCase().includes(srch);
-  });
+  var modoGlobalP = srch.length > 0;
+  var list = modoGlobalP
+    ? SD.proveedores.filter(function(p){
+        return (p.proveedor||'').toLowerCase().includes(srch) ||
+               (p.num||'').toLowerCase().includes(srch) ||
+               (p.concepto||'').toLowerCase().includes(srch);
+      })
+    : SD.proveedores.filter(function(p){ return p.mes===curPT; });
 
   var tot = list.reduce(function(a,p){ return a+Number(p.base||0); },0);
   var pag = list.filter(function(p){ return p.estado==='Pagado'; }).reduce(function(a,p){ return a+Number(p.base||0); },0);
   var pen = list.filter(function(p){ return p.estado==='Pendiente'; }).reduce(function(a,p){ return a+Number(p.base||0); },0);
 
-  g('p-sum').innerHTML = mkSumCard('Total compras (base)', eur(tot),
-    mkChip('Pagado '+eur(pag),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'cr') : ''));
+  var pSumLbl = modoGlobalP ? 'Resultados globales ('+list.length+')' : 'Total compras (base)';
+  g('p-sum').innerHTML = mkSumCard(pSumLbl, eur(tot),
+    mkChip('Pagado '+eur(pag),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'cr') : '') +
+    (modoGlobalP ? mkChip('Busqueda global','cv') : ''));
 
   if(!list.length){
-    g('p-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">Sin compras en '+(ML[curPT]||curPT)+'</div>';
+    g('p-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">'+(modoGlobalP?'Sin resultados para "'+srch+'"':'Sin compras en '+(ML[curPT]||curPT))+'</div>';
     return;
   }
 
   g('p-list').innerHTML = list.map(function(p){
     var estCls = p.estado==='Pagado' ? 'cg' : 'cr';
     var estTxt = p.estado==='Pagado' ? 'Pagado' : 'Pendiente';
-    var sub = (p.fecha||'') + (p.num ? ' - Fac#'+p.num : '');
+    var sub = (modoGlobalP?(p.mes||'')+' | ':'') + (p.fecha||'') + (p.num ? ' - Fac#'+p.num : '');
     var conc = p.concepto ? '<div class="rw-sub" style="font-style:italic">'+(p.concepto.length>55?p.concepto.slice(0,55)+'...':escH(p.concepto))+'</div>' : '';
     var amtColor = p.base<0 ? 'var(--red)' : 'var(--t1)';
     var acts =
@@ -1512,6 +1548,122 @@ function actualizarNumFact(){
   checkDupFact();
 }
 
+
+// ============================================================
+// AUTOCOMPLETADO CLIENTE Y MATRICULA
+// ============================================================
+function acClose(listId){
+  var el = g(listId);
+  if(el) el.classList.remove('open');
+}
+
+function resaltar(texto, q){
+  if(!q) return escH(texto);
+  var t = escH(texto);
+  var ql = q.toLowerCase();
+  var tl = t.toLowerCase();
+  var idx = tl.indexOf(ql);
+  if(idx < 0) return t;
+  return t.slice(0,idx) + '<b>' + t.slice(idx, idx+ql.length) + '</b>' + t.slice(idx+ql.length);
+}
+
+function acCliente(val){
+  var list = g('ac-cli-list');
+  if(!list) return;
+  var q = (val||'').trim().toLowerCase();
+
+  var mapaClientes = {};
+  SD.facturas.forEach(function(f){
+    if(!f.cliente || f.cliente === 'Particular') return;
+    var k = f.cliente.toLowerCase();
+    if(!mapaClientes[k] || (f.fecha||'') > (mapaClientes[k].fecha||'')){
+      mapaClientes[k] = {
+        cliente: f.cliente,
+        matricula: f.matricula||'',
+        concepto: f.concepto||'',
+        fecha: f.fecha||''
+      };
+    }
+  });
+
+  var resultados = Object.values(mapaClientes).filter(function(c){
+    return !q || c.cliente.toLowerCase().includes(q);
+  }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,8);
+
+  if(!resultados.length || !q){
+    list.classList.remove('open');
+    return;
+  }
+
+  list.innerHTML = resultados.map(function(c){
+    var datos = JSON.stringify({cliente:c.cliente,matricula:c.matricula,concepto:c.concepto});
+    return '<div class="ac-item" onmousedown="acSelectCliente(' + escH(datos) + ')">' +
+      resaltar(c.cliente, q) +
+      (c.matricula ? '<small>Matricula: ' + escH(c.matricula) + (c.concepto ? ' | ' + escH(c.concepto.slice(0,40)) : '') + '</small>' : '') +
+      '</div>';
+  }).join('');
+  list.classList.add('open');
+}
+
+function acSelectCliente(datosStr){
+  var datos = typeof datosStr === 'string' ? JSON.parse(datosStr) : datosStr;
+  var cli = g('mf-cli'); if(cli) cli.value = datos.cliente||'';
+  var mat = g('mf-mat'); if(mat && datos.matricula) mat.value = datos.matricula;
+  acClose('ac-cli-list');
+  acClose('ac-mat-list');
+  checkDupFact();
+  setTimeout(function(){ var c=g('mf-conc'); if(c) c.focus(); }, 100);
+}
+
+function acMatricula(val){
+  var list = g('ac-mat-list');
+  if(!list) return;
+  var q = (val||'').trim().toLowerCase();
+
+  var mapaMat = {};
+  SD.facturas.forEach(function(f){
+    if(!f.matricula) return;
+    var k = f.matricula.toLowerCase();
+    if(!mapaMat[k] || (f.fecha||'') > (mapaMat[k].fecha||'')){
+      mapaMat[k] = {
+        matricula: f.matricula,
+        cliente: f.cliente||'',
+        concepto: f.concepto||'',
+        fecha: f.fecha||''
+      };
+    }
+  });
+
+  var resultados = Object.values(mapaMat).filter(function(m){
+    return !q || m.matricula.toLowerCase().includes(q);
+  }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,8);
+
+  if(!resultados.length){
+    list.classList.remove('open');
+    return;
+  }
+
+  list.innerHTML = resultados.map(function(m){
+    var datos = JSON.stringify({matricula:m.matricula,cliente:m.cliente,concepto:m.concepto});
+    return '<div class="ac-item" onmousedown="acSelectMatricula(' + escH(datos) + ')">' +
+      resaltar(m.matricula, q) +
+      '<small>' + escH(m.cliente) + (m.concepto ? ' | ' + escH(m.concepto.slice(0,35)) : '') + '</small>' +
+      '</div>';
+  }).join('');
+  list.classList.add('open');
+}
+
+function acSelectMatricula(datosStr){
+  var datos = typeof datosStr === 'string' ? JSON.parse(datosStr) : datosStr;
+  var mat = g('mf-mat'); if(mat) mat.value = datos.matricula||'';
+  var cli = g('mf-cli');
+  if(cli && !cli.value.trim() && datos.cliente && datos.cliente !== 'Particular'){
+    cli.value = datos.cliente;
+  }
+  acClose('ac-mat-list');
+  checkDupFact();
+}
+
 // ============================================================
 // DETECCION DE DUPLICADOS
 // ============================================================
@@ -1685,6 +1837,7 @@ function calcF(){
 function openFact(){
   g('mf-tit').textContent='Nueva Factura de Ingreso';
   g('mf-id').value='';
+  acClose('ac-cli-list'); acClose('ac-mat-list');
   var dw=g('mf-dup-warn'); if(dw){dw.style.display='none';}
   var sb=g('mf-save-btn'); if(sb){sb.style.background='var(--blue)';sb.textContent='Guardar Factura';}
   var hoy = new Date().toISOString().slice(0,10);
@@ -1702,7 +1855,7 @@ function openFact(){
   setTipoFact('factura');
   g('mf').classList.add('on');
 }
-function closeFact(){ g('mf').classList.remove('on'); }
+function closeFact(){ g('mf').classList.remove('on'); acClose('ac-cli-list'); acClose('ac-mat-list'); }
 
 function editFact(id){
   var f = SD.facturas.find(function(x){ return x.id===id; }); if(!f) return;
