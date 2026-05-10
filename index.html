@@ -650,7 +650,7 @@ var SD = {
     {id:'gv14',mes:'Dic-25',fecha:'2025-12-01',num:'25-2641',prov:'Asemar',concepto:'Gestoria Diciembre 2025',importe:60.5,pago:'Transferencia'},
     {id:'gv15',mes:'Dic-25',fecha:'2025-12-01',num:'2100',prov:'Zaballos',concepto:'Asesoria Nov-Dic 2025',importe:153.23,pago:'Transferencia'}
   ],
-  version: 12,
+  version: 99,
   numNext: 57,
   actividad: [],
   perfil: {
@@ -733,21 +733,20 @@ async function cloudGet(){
     var needsPush = false;
     if(d && typeof d==='object'){
       var serverVer = d.version || 0;
-      var localVer  = SD.version || 12;
+      var localVer  = SD.version || 99;
       if(serverVer < localVer){
-        // Datos locales son mas recientes que el servidor - forzar subida
+        // Datos del codigo son mas nuevos - subir al servidor y usar locales
         needsPush = true;
-        console.log('Datos locales v'+localVer+' > servidor v'+serverVer+' -> subiendo...');
+        console.log('Datos locales v'+localVer+' > servidor v'+serverVer+' -> usando datos del codigo');
       } else {
-        // Servidor igual o mas nuevo - usar sus datos
-        if(d.facturas && d.facturas.length>=SD.facturas.length){ SD.facturas=d.facturas; }
-        else { needsPush=true; }
-        if(d.proveedores && d.proveedores.length>=SD.proveedores.length){ SD.proveedores=d.proveedores; }
-        else { needsPush=true; }
-        if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos=d.gastosFijos;
-        if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables=d.gastosVariables;
-        if(d.actividad) SD.actividad=d.actividad;
-        if(d.perfil) SD.perfil=Object.assign({},SD.perfil,d.perfil);
+        // Servidor tiene version igual o mayor - usar facturas y proveedores del servidor
+        // pero SOLO si el servidor tiene datos (no array vacio)
+        if(d.facturas && d.facturas.length > 0) SD.facturas = d.facturas;
+        if(d.proveedores && d.proveedores.length > 0) SD.proveedores = d.proveedores;
+        if(d.gastosFijos && d.gastosFijos.length > 0) SD.gastosFijos = d.gastosFijos;
+        if(d.gastosVariables && d.gastosVariables.length > 0) SD.gastosVariables = d.gastosVariables;
+        if(d.actividad) SD.actividad = d.actividad;
+        if(d.perfil) SD.perfil = Object.assign({}, SD.perfil, d.perfil);
       }
       // numNext: siempre calcular desde facturas reales
       var factsRef = SD.facturas;
