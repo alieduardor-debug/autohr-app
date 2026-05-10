@@ -34,7 +34,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Navbar */
 .navbar{background:var(--t1);border-top:1px solid #1e293b;display:grid;grid-template-columns:repeat(7,1fr);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding-bottom:env(safe-area-inset-bottom,8px)}
-.nb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;border:none;background:transparent;cursor:pointer;font-size:8px;color:#64748b;font-family:inherit;-webkit-appearance:none}
+.nb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 1px 6px;border:none;background:transparent;cursor:pointer;font-size:8px;color:#64748b;font-family:inherit;-webkit-appearance:none}
 .nb.on{color:#fff}
 .ni{font-size:18px;line-height:1.2}
 
@@ -140,6 +140,15 @@ textarea{resize:vertical;min-height:60px}
 .inv-tot{margin-top:10px;border-top:2px solid var(--t1);padding-top:8px;display:flex;justify-content:flex-end}
 
 @media print{.no-print{display:none!important}}
+
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1.5px solid var(--blue);border-radius:0 0 10px 10px;z-index:300;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none}
+.autocomplete-list.open{display:block}
+.ac-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px}
+.ac-item:last-child{border-bottom:none}
+.ac-item:active{background:var(--bg)}
+.ac-item b{color:var(--blue)}
+.ac-item small{display:block;font-size:11px;color:var(--t3);margin-top:2px}
 </style>
 </head>
 <body>
@@ -170,8 +179,8 @@ textarea{resize:vertical;min-height:60px}
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div><div class="tit">AUTO H&amp;R<small>Calle Sant Isidre 85, Gava</small></div></div>
-  <div class="sync-row"><div class="sdot" id="sdot" style="background:var(--t4)"></div><span class="slbl" id="slbl">--</span></div>
+  <div><div class="tit">AUTO H&amp;R<small id="topbar-sub">Calle Sant Isidre 85, Gava</small></div></div>
+  <div style="display:flex;align-items:center;gap:8px"><div style="background:#1e40af;border-radius:20px;padding:3px 10px;display:flex;align-items:center;gap:5px"><span style="font-size:13px">&#128100;</span><span style="font-size:12px;font-weight:600;color:#fff" id="topbar-user">--</span></div><div class="sync-row" onclick="syncNow()" style="cursor:pointer"><div class="sdot" id="sdot" style="background:var(--t4)"></div><span class="slbl" id="slbl">sync</span></div></div>
 </div>
 
 <!-- CONTENT -->
@@ -241,7 +250,6 @@ textarea{resize:vertical;min-height:60px}
     </div>
   </div>
 
-
   <div class="sec" id="sec-tesoreria">
     <div class="lbl">Vision por mes</div>
     <div class="tabs" id="tes-tabs" style="margin-bottom:12px"></div>
@@ -258,15 +266,64 @@ textarea{resize:vertical;min-height:60px}
   </div>
 
   <div class="sec" id="sec-ajustes">
-    <div class="lbl">Cuenta</div>
+    <div class="lbl">Sesion activa</div>
     <div class="card">
       <div style="font-size:14px;font-weight:600" id="adj-user">--</div>
       <div style="font-size:12px;color:var(--t3);margin-top:3px" id="adj-sync">Ultima sync: --</div>
     </div>
-    <div class="lbl">Datos</div>
+
+    <div class="lbl">Datos fiscales del emisor</div>
+    <div class="card" style="padding:0">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Nombre / Empresa</div>
+        <input type="text" id="prf-nombre" style="border:none;padding:0;font-size:14px;font-weight:600;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">NIF / CIF</div>
+        <input type="text" id="prf-nif" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Regimen fiscal</div>
+        <input type="text" id="prf-regimen" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Direccion fiscal</div>
+        <input type="text" id="prf-dir" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Email</div>
+        <input type="email" id="prf-email" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" placeholder="correo@email.com" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Telefono</div>
+        <input type="tel" id="prf-tel" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" placeholder="+34 000 000 000" onchange="savePerfil()">
+      </div>
+    </div>
+
+    <div class="lbl">Datos bancarios</div>
+    <div class="card" style="padding:0">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">IBAN</div>
+        <input type="text" id="prf-iban" style="border:none;padding:0;font-size:13px;font-weight:600;background:transparent;outline:none;width:100%;font-family:monospace" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Banco</div>
+        <input type="text" id="prf-banco" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">Titular de la cuenta</div>
+        <input type="text" id="prf-titular" style="border:none;padding:0;font-size:13px;background:transparent;outline:none;width:100%" onchange="savePerfil()">
+      </div>
+    </div>
+    <button class="btn bp" onclick="savePerfil(true)">Guardar datos fiscales</button>
+
+    <div class="lbl">Sincronizacion</div>
     <button class="btn" onclick="syncNow()">Sincronizar ahora</button>
-    <button class="btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="cloudPut().then(function(){toast('Datos subidos correctamente');})">Forzar subida datos locales</button>
+    <button class="btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="forzarSubida()">Forzar subida datos locales</button>
+    <button class="btn bs" onclick="testConexion()">Verificar conexion JSONBin</button>
     <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
+    <div class="lbl">Historial de actividad</div>
+    <div id="actividad-lista" style="max-height:280px;overflow-y:auto"></div>
     <div class="lbl">Sesion</div>
     <button class="btn br" onclick="logout()">Cerrar sesion</button>
     <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--t4)">Auto H&amp;R v10 - 2026</div>
@@ -281,7 +338,7 @@ textarea{resize:vertical;min-height:60px}
   <button class="nb" id="nb-proveedores" onclick="goTab('proveedores')"><span class="ni">&#128722;</span>Proveedores</button>
   <button class="nb" id="nb-gastos" onclick="goTab('gastos')"><span class="ni">&#128176;</span>Gastos</button>
   <button class="nb" id="nb-tesoreria" onclick="goTab('tesoreria')"><span class="ni">&#128200;</span>Tesorer.</button>
-<button class="nb" id="nb-fiscal" onclick="goTab('fiscal')"><span class="ni">&#128203;</span>Fiscal</button>
+  <button class="nb" id="nb-fiscal" onclick="goTab('fiscal')"><span class="ni">&#128203;</span>Fiscal</button>
   <button class="nb" id="nb-ajustes" onclick="goTab('ajustes')"><span class="ni">&#9881;</span>Ajustes</button>
 </div>
 
@@ -289,16 +346,54 @@ textarea{resize:vertical;min-height:60px}
 <div class="mbg" id="mf">
   <div class="sheet">
     <div class="sh"></div>
-    <div class="stit" id="mf-tit">Nueva Factura de Ingreso</div>
+    <div class="stit" id="mf-tit">Nueva Factura / Albaran</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="fl">Tipo de registro</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button type="button" id="tipo-factura-btn" onclick="setTipoFact('factura')"
+          style="padding:10px;border-radius:10px;border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+          Factura
+        </button>
+        <button type="button" id="tipo-albaran-btn" onclick="setTipoFact('albaran')"
+          style="padding:10px;border-radius:10px;border:2px solid var(--border2);background:var(--card);color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
+          Albaran / Ticket
+        </button>
+      </div>
+      <div id="tipo-info" style="margin-top:7px;font-size:11px;color:var(--blue);background:#eff6ff;border-radius:7px;padding:6px 10px">
+        Con numero de factura y desglose de IVA
+      </div>
+    </div>
+    <input type="hidden" id="mf-tipo" value="factura">
     <div class="fg"><label class="fl">Mes</label><select id="mf-mes"></select></div>
     <div class="g2">
-      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mf-fecha"></div>
-      <div class="fg"><label class="fl">N Factura</label><input type="text" id="mf-num" placeholder="Auto"></div>
+      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mf-fecha" onchange="actualizarNumFact()"></div>
+      <div class="fg"><label class="fl">N Factura <span id="mf-num-hint" style="font-weight:400;color:var(--blue);font-size:10px"></span></label><input type="text" id="mf-num" placeholder="Auto" oninput="checkDupFact()"></div>
     </div>
-    <div class="fg"><label class="fl">Cliente</label><input type="text" id="mf-cli" placeholder="Nombre cliente"></div>
-    <div class="fg"><label class="fl">Matricula</label><input type="text" id="mf-mat" placeholder="1234ABC"></div>
-    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF()"></div>
-    <div class="g2">
+    <div class="fg">
+      <label class="fl">Cliente</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="mf-cli" placeholder="Nombre o iniciales..." autocomplete="off"
+          oninput="checkDupFact();acCliente(this.value)"
+          onfocus="acCliente(this.value)"
+          onblur="setTimeout(function(){acClose('ac-cli-list')},200)">
+        <div class="autocomplete-list" id="ac-cli-list"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Matricula</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="mf-mat" placeholder="1234ABC" autocomplete="off"
+          oninput="acMatricula(this.value)"
+          onfocus="acMatricula(this.value)"
+          onblur="setTimeout(function(){acClose('ac-mat-list')},200)">
+        <div class="autocomplete-list" id="ac-mat-list"></div>
+      </div>
+    </div>
+    <div class="fg" id="mf-base-wrap">
+      <label class="fl" id="mf-base-lbl">Base Imponible (sin IVA)</label>
+      <input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF();checkDupFact()">
+    </div>
+    <div class="g2" id="mf-iva-wrap">
       <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mf-iva" step="0.01" readonly placeholder="Auto"></div>
       <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mf-tot" step="0.01" readonly placeholder="Auto"></div>
     </div>
@@ -311,8 +406,9 @@ textarea{resize:vertical;min-height:60px}
         <select id="mf-est"><option value="Cobrado">Cobrado</option><option value="Pendiente">Pendiente</option></select>
       </div>
     </div>
+    <div id="mf-dup-warn" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:#78350f"></div>
     <input type="hidden" id="mf-id">
-    <button class="btn bp" onclick="saveFact()">Guardar Factura</button>
+    <button class="btn bp" id="mf-save-btn" onclick="saveFact()">Guardar Factura</button>
     <button class="btn" onclick="closeFact()">Cancelar</button>
   </div>
 </div>
@@ -325,13 +421,13 @@ textarea{resize:vertical;min-height:60px}
     <div class="fg"><label class="fl">Mes</label><select id="mp-mes"></select></div>
     <div class="g2">
       <div class="fg"><label class="fl">Fecha</label><input type="date" id="mp-fecha"></div>
-      <div class="fg"><label class="fl">N Factura Prov.</label><input type="text" id="mp-num" placeholder="FAB26..."></div>
+      <div class="fg"><label class="fl">N Factura Prov.</label><input type="text" id="mp-num" placeholder="FAB26..." oninput="checkDupProv()"></div>
     </div>
     <div class="fg"><label class="fl">Proveedor</label>
-      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner...">
+      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner..." oninput="checkDupProv()">
       <datalist id="prov-dl"><option value="Adbosch"><option value="Berner"><option value="Otro"></datalist>
     </div>
-    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mp-base" step="0.01" placeholder="0.00" oninput="calcP()"></div>
+    <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mp-base" step="0.01" placeholder="0.00" oninput="calcP();checkDupProv()"></div>
     <div class="g2">
       <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mp-iva" step="0.01" readonly placeholder="Auto"></div>
       <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mp-tot" step="0.01" readonly placeholder="Auto"></div>
@@ -340,8 +436,9 @@ textarea{resize:vertical;min-height:60px}
     <div class="fg"><label class="fl">Estado</label>
       <select id="mp-est"><option value="Pagado">Pagado</option><option value="Pendiente">Pendiente</option></select>
     </div>
+    <div id="mp-dup-warn" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:#78350f"></div>
     <input type="hidden" id="mp-id">
-    <button class="btn bp" onclick="saveProv()">Guardar</button>
+    <button class="btn bp" id="mp-save-btn" onclick="saveProv()">Guardar</button>
     <button class="btn" onclick="closeProv()">Cancelar</button>
   </div>
 </div>
@@ -495,8 +592,8 @@ var SD = {
   ],
   proveedores: [
     // SEP-25 (2 - NUEVOS, no estaban en app)
-    {id:'p000a',mes:'Sep-25',fecha:'2025-09-20',num:'FAB25049098',proveedor:'Adbosch',base:726.16,iva:152.49,total:878.65,concepto:'Piezas 10 nov 25',estado:'Pagado'},
-    {id:'p000b',mes:'Sep-25',fecha:'2025-09-13',num:'1166797207',proveedor:'Berner',base:477.54,iva:100.28,total:577.82,concepto:'Piezas 22 nov',estado:'Pagado'},
+    {id:'p000a',mes:'Sep-25',fecha:'2025-09-30',num:'FAB25049098',proveedor:'Adbosch',base:726.16,iva:152.49,total:878.65,concepto:'Piezas 10 nov 25',estado:'Pagado'},
+    {id:'p000b',mes:'Sep-25',fecha:'2025-09-23',num:'1166797207',proveedor:'Berner',base:477.54,iva:100.28,total:577.82,concepto:'Piezas 22 nov',estado:'Pagado'},
     // OCT-25 (2)
     {id:'p001',mes:'Oct-25',fecha:'2025-10-21',num:'1166836104',proveedor:'Berner',base:103.21,iva:21.67,total:124.88,concepto:'Piezas 31 Oct 25',estado:'Pagado'},
     {id:'p002',mes:'Oct-25',fecha:'2025-10-15',num:'FAB25051208',proveedor:'Adbosch',base:483.79,iva:101.60,total:585.39,concepto:'Piezas Oct 25',estado:'Pagado'},
@@ -553,8 +650,21 @@ var SD = {
     {id:'gv14',mes:'Dic-25',fecha:'2025-12-01',num:'25-2641',prov:'Asemar',concepto:'Gestoria Diciembre 2025',importe:60.5,pago:'Transferencia'},
     {id:'gv15',mes:'Dic-25',fecha:'2025-12-01',num:'2100',prov:'Zaballos',concepto:'Asesoria Nov-Dic 2025',importe:153.23,pago:'Transferencia'}
   ],
-  numNext: 68,
-  version: 99
+  numNext: 57,
+  actividad: [],
+  perfil: {
+    nombre: 'Ali Eduardo Rebolledo Lozada',
+    nif: '56010757F',
+    regimen: 'Autonomo - Regimen General IVA',
+    direccion: 'Calle Sant Isidre 85, Gava (Barcelona)',
+    email: '',
+    telefono: '',
+    iban: 'ES41 2100 8758 9802 0012 8887',
+    banco: 'CaixaBank',
+    titular_cuenta: 'Ali Eduardo Rebolledo Lozada',
+    nombre_empresa: 'Auto H&R',
+    logo_letra: 'HR'
+  }
 };
 
 // ============================================================
@@ -601,54 +711,100 @@ async function cloudGet(){
   if(!BIN||!KEY) return;
   setSyncStatus('sy');
   try{
-    var r = await fetch(JBIN+BIN+'/latest',{credentials:'omit',headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
-    if(!r.ok) throw new Error();
+    var r = await fetch(JBIN+BIN+'/latest',{
+      method:'GET',
+      mode:'cors',
+      credentials:'omit',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}
+    });
+    if(r.status===401||r.status===403){
+      setSyncStatus('err'); g('slbl').textContent='API Key incorrecta'; return;
+    }
+    if(r.status===404){
+      setSyncStatus('err'); g('slbl').textContent='Bin ID incorrecto'; return;
+    }
+    if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error '+r.status; return; }
     var d = await r.json();
-    var srvVer = (d && d.version) ? d.version : 0;
-    var datosCorrectos = false;
-    // Verificar que FAB26018740 tiene mes Abr-26 (no Mar-26 como en datos viejos)
-    if(d.proveedores && d.proveedores.length > 0){
-      var fab740 = d.proveedores.filter(function(p){ return p.num==='FAB26018740'; })[0];
-      var fab247 = d.proveedores.filter(function(p){ return p.num==='FAB26022247'; })[0];
-      var berner48 = d.proveedores.filter(function(p){ return p.num==='1166989048'; })[0];
-      // Datos correctos: FAB26018740 en Abr-26, FAB26022247 existe, Berner el 20/04
-      datosCorrectos = fab740 && fab740.mes==='Abr-26' &&
-                       fab247 && Math.abs(fab247.total-639.28)<0.1 &&
-                       berner48 && berner48.fecha==='2026-04-20';
+    // Verificar que los datos del servidor son correctos
+    // FAB26018740 debe tener mes Abr-26 (no Mar-26 como en datos viejos)
+    // FAB26022247 debe existir con total 639.28
+    var datosOK = false;
+    if(d && d.proveedores && d.proveedores.length > 0){
+      var p740  = d.proveedores.filter(function(p){ return p.num==='FAB26018740'; })[0];
+      var p247  = d.proveedores.filter(function(p){ return p.num==='FAB26022247'; })[0];
+      var pb48  = d.proveedores.filter(function(p){ return p.num==='1166989048';  })[0];
+      datosOK = p740 && p740.mes==='Abr-26' &&
+                p247 && Math.abs((p247.total||0)-639.28)<0.1 &&
+                pb48 && pb48.fecha==='2026-04-20';
     }
-    if(srvVer >= 99 && datosCorrectos){
-      // Servidor tiene datos correctos y actualizados - usarlos
-      if(d.facturas && d.facturas.length > 0) SD.facturas = d.facturas;
-      if(d.proveedores && d.proveedores.length > 0) SD.proveedores = d.proveedores;
-      if(d.gastosFijos && d.gastosFijos.length > 0) SD.gastosFijos = d.gastosFijos;
-      if(d.gastosVariables && d.gastosVariables.length > 0) SD.gastosVariables = d.gastosVariables;
-      if(d.numNext) SD.numNext = d.numNext;
+    if(d && typeof d==='object' && datosOK){
+      // Datos del servidor correctos - usarlos
+      if(d.facturas   && d.facturas.length   > 0) SD.facturas   = d.facturas;
+      if(d.proveedores&& d.proveedores.length > 0) SD.proveedores= d.proveedores;
+      if(d.gastosFijos&& d.gastosFijos.length > 0) SD.gastosFijos= d.gastosFijos;
+      if(d.gastosVariables&&d.gastosVariables.length>0) SD.gastosVariables=d.gastosVariables;
+      if(d.numNext){
+        var maxSq=56;
+        SD.facturas.forEach(function(f){
+          if(f.num&&f.num.length>=3){var sq=parseInt(f.num.slice(-3),10);if(!isNaN(sq)&&sq>maxSq)maxSq=sq;}
+        });
+        SD.numNext=Math.max(maxSq+1,57);
+      }
+      if(d.perfil)    SD.perfil    = Object.assign({},SD.perfil,d.perfil);
+      if(d.actividad) SD.actividad = d.actividad;
     } else {
-      // Datos del servidor incorrectos o desactualizados - subir datos locales
-      console.log('Datos servidor incorrectos (v'+srvVer+', FAB740 correcto:'+datosCorrectos+') - subiendo datos correctos...');
+      // Datos del servidor incorrectos o vacios - subir datos locales correctos
+      console.log('Datos servidor incorrectos - subiendo datos locales...');
       await cloudPut();
+      toast('Datos actualizados en servidor');
     }
-    lastSync = new Date();
+    lastSync=new Date();
     setSyncStatus('ok');
+    updateSyncLabel();
     renderAll();
-  }catch(e){ setSyncStatus('err'); }
+  }catch(e){
+    setSyncStatus('err');
+    var msg=e.message||'';
+    if(msg.includes('Load failed')||msg.includes('Failed to fetch')||msg.includes('NetworkError')){
+      g('slbl').textContent='Sin conexion a JSONBin';
+      toast('Sin conexion. Comprueba Bin ID y API Key.');
+    } else {
+      g('slbl').textContent='Error red';
+    }
+    console.log('cloudGet error:', e.message);
+    renderAll();
+  }
 }
 
 async function cloudPut(){
   if(!BIN||!KEY) return;
   setSyncStatus('sy');
   try{
-    await fetch(JBIN+BIN,{
+    var r = await fetch(JBIN+BIN,{
       method:'PUT',
+      mode:'cors',
       credentials:'omit',headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify(SD)
+      body:JSON.stringify(Object.assign({},SD,{user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString()}))
     });
-    lastSync = new Date();
+    if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error guardando'; return; }
+    lastSync=new Date();
     setSyncStatus('ok');
-  }catch(e){ setSyncStatus('err'); }
+    updateSyncLabel();
+  }catch(e){
+    setSyncStatus('err');
+    g('slbl').textContent='Error guardando';
+    console.log('cloudPut error:', e.message);
+  }
 }
 
-async function syncNow(){ await cloudGet(); toast('Datos actualizados'); }
+async function forzarSubida(){
+  if(!BIN||!KEY){ toast('Configura JSONBin primero'); return; }
+  toast('Subiendo datos locales...');
+  await cloudPut();
+  toast('Datos locales subidos correctamente');
+}
+
+async function syncNow(){ await cloudGet(); toast('Sincronizacion completada'); }
 
 // ============================================================
 // SETUP & LOGIN
@@ -678,16 +834,32 @@ async function doSetup(){
 
 function startApp(){
   g('adj-user').textContent = USER;
+  var topU = g('topbar-user'); if(topU) topU.textContent = USER;
+  var sub = g('topbar-sub');
+  if(sub) sub.textContent = USER;
   initTabs();
-  renderAll(); // datos locales inmediatamente
-  cloudGet();  // sync con servidor (si datos viejos los sobreescribe)
-  setInterval(function(){ if(!document.hidden && BIN) cloudGet(); }, 60000);
+  renderAll(); // render con datos locales primero (rapido)
+  loadPerfil();
+  cloudGet();  // luego sync con servidor (actualiza si hay mas datos)
+  setInterval(function(){
+    if(!document.hidden && BIN) cloudGet();
+  }, 60000);
 }
 
 function logout(){
   if(!confirm('Cerrar sesion?')) return;
   localStorage.removeItem('autohr_cfg');
   location.reload();
+}
+
+function updateSyncLabel(){
+  if(lastSync){
+    var h = lastSync.getHours().toString().padStart(2,'0');
+    var m = lastSync.getMinutes().toString().padStart(2,'0');
+    var d = lastSync.getDate().toString().padStart(2,'0');
+    var mo = (lastSync.getMonth()+1).toString().padStart(2,'0');
+    g('adj-sync').textContent = 'Ultima sync: '+d+'/'+mo+' '+h+':'+m+' ('+USER+')';
+  }
 }
 
 function renderAll(){
@@ -699,272 +871,9 @@ function renderAll(){
     else if(id==='proveedores') renderProvs();
     else if(id==='gastos') renderGastos();
     else if(id==='fiscal') renderFiscal();
-    else if(id==='ajustes') loadPerfil();
     else if(id==='tesoreria') renderTesoreria();
   }
 }
-
-// ============================================================
-// TESORERIA
-// ============================================================
-function mesDeVencimiento(p){
-  // REGLAS REALES CONFIRMADAS:
-  // Adbosch: cobra el dia 10 del mes M+2 (dos meses despues del MES de la factura)
-  //   Ej: facturas de Marzo -> vencen 10 de Mayo
-  //   Ej: facturas de Abril  -> vencen 10 de Junio
-  // Berner: cobra 30 dias desde la fecha exacta de emision
-  //   Ej: emitida 20/04 -> vence 20/05
-  // Otros: mes siguiente al mes de la factura
-
-  var prov = (p.proveedor||'').toLowerCase();
-  var nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-  if(prov.indexOf('adbosch') >= 0){
-    // Usar el campo 'mes' para calcular M+2
-    // El mes esta en formato 'Ene-26', hay que convertirlo
-    var mesFact = p.mes || '';
-    var partes = mesFact.split('-');
-    if(partes.length !== 2) return null;
-    var mesIdx = nombres.indexOf(partes[0]);
-    if(mesIdx < 0) return null;
-    var anno = 2000 + parseInt(partes[1], 10);
-    var d = new Date(anno, mesIdx, 1);
-    d.setMonth(d.getMonth() + 2); // M+2
-    return nombres[d.getMonth()] + '-' + String(d.getFullYear()).slice(-2);
-
-  } else {
-    // Berner y otros: 30 dias desde la fecha de emision
-    var fecha = p.fecha || '';
-    if(!fecha) return null;
-    var d2 = new Date(fecha);
-    if(isNaN(d2.getTime())) return null;
-    d2.setDate(d2.getDate() + 30);
-    return nombres[d2.getMonth()] + '-' + String(d2.getFullYear()).slice(-2);
-  }
-}
-
-function diaVencimiento(p){
-  var prov = (p.proveedor||'').toLowerCase();
-  if(prov.indexOf('adbosch') >= 0) return 'dia 10';
-  return 'al mes';
-}
-
-function renderTesoreria(){
-  var tet = g('tes-tabs');
-  if(!tet) return;
-
-  var m = curTET;
-  var idx = MESES_I.indexOf(m);
-  var mSig = idx<MESES_I.length-1 ? MESES_I[idx+1] : null;
-
-  // Ingresos del mes seleccionado
-  var facs = SD.facturas.filter(function(f){ return f.mes===m; });
-  var ingTotal = facs.reduce(function(a,f){ return a+Number(f.base||0); },0);
-  var ingCobrado = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
-  var ingPendiente = facs.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
-  var ivaRepercutido = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.iva||0); },0);
-
-  // Proveedores que vencen ESTE MES (calculado por regla real de cada proveedor)
-  var provsVencenEste = SD.proveedores.filter(function(p){
-    return mesDeVencimiento(p) === m;
-  });
-  var pagarProvs = provsVencenEste.reduce(function(a,p){ return a+Number(p.total||0); },0);
-
-  // Proveedores que vencen EL MES SIGUIENTE
-  var provsVencenSig = mSig ? SD.proveedores.filter(function(p){
-    return mesDeVencimiento(p) === mSig;
-  }) : [];
-  var pagarProvsSig = provsVencenSig.reduce(function(a,p){ return a+Number(p.total||0); },0);
-
-  // IVA soportado: facturas del mes actual (para Modelo 303)
-  var provsAct = SD.proveedores.filter(function(p){ return p.mes===m; });
-  var ivaSoportado = provsAct.reduce(function(a,p){ return a+Number(p.iva||0); },0);
-
-  // Gastos fijos mensual
-  var gfMes = SD.gastosFijos.reduce(function(a,x){ return a+Number(x.importe_mes||0); },0);
-
-  // Gastos variables del mes
-  var gvMes = SD.gastosVariables.filter(function(x){ return x.mes===m; }).reduce(function(a,x){ return a+Number(x.importe||0); },0);
-
-  // IVA neto a pagar (trimestral - estimacion)
-  var ivaNeto = ivaRepercutido - ivaSoportado;
-
-  // Calculo IRPF trimestral estimado (20% rdto neto)
-  // Buscar a que trimestre pertenece el mes
-  var trimMap = {
-    'Sep-25':3,'Oct-25':4,'Nov-25':4,'Dic-25':4,
-    'Ene-26':1,'Feb-26':1,'Mar-26':1,
-    'Abr-26':2,'May-26':2,'Jun-26':2,
-    'Jul-26':3,'Ago-26':3,'Sep-26':3,
-    'Oct-26':4,'Nov-26':4,'Dic-26':4
-  };
-  var qMeses = {
-    1:['Ene-26','Feb-26','Mar-26'],
-    2:['Abr-26','May-26','Jun-26'],
-    3:['Jul-26','Ago-26','Sep-26','Sep-25'],
-    4:['Oct-26','Nov-26','Dic-26','Oct-25','Nov-25','Dic-25']
-  };
-  var qNum = trimMap[m];
-  var qMs = qMeses[qNum]||[m];
-  var qIng = qMs.reduce(function(a,qm){
-    return a+SD.facturas.filter(function(f){ return f.mes===qm&&f.estado==='Cobrado'; }).reduce(function(s,f){ return s+Number(f.base||0); },0);
-  },0);
-  var qComp = qMs.reduce(function(a,qm){
-    return a+SD.proveedores.filter(function(p){ return p.mes===qm; }).reduce(function(s,p){ return s+Number(p.base||0); },0);
-  },0);
-  var qGv = qMs.reduce(function(a,qm){
-    return a+SD.gastosVariables.filter(function(x){ return x.mes===qm; }).reduce(function(s,x){ return s+Number(x.importe||0); },0);
-  },0);
-  var qRnd = qIng - qComp - qGv - gfMes*3;
-  var irpfQ = qRnd>0 ? qRnd*0.20 : 0;
-  var esMesFinQ = (m==='Mar-26'||m==='Jun-26'||m==='Sep-26'||m==='Dic-26');
-
-  // MINIMO EN BANCO este mes
-  var minimoMes = pagarProvs + gfMes + gvMes;
-  // MINIMO si ademas vence IRPF/IVA este mes (trimestral)
-  var minimoConImpuestos = minimoMes + (esMesFinQ ? irpfQ + Math.max(ivaNeto,0) : 0);
-
-  // Resultado real del mes
-  var resultadoReal = ingCobrado - pagarProvs - gfMes - gvMes;
-
-  // Margen de seguridad (15% sobre minimo)
-  var margenSeg = minimoConImpuestos * 0.15;
-  var minimoRecomendado = minimoConImpuestos + margenSeg;
-
-  var html = '';
-
-  // -- SEMAFORO RESUMEN --
-  var semaforoColor = resultadoReal>=0 ? '#16a34a' : '#dc2626';
-  var semaforoBg = resultadoReal>=0 ? '#dcfce7' : '#fee2e2';
-  var semaforoIcon = resultadoReal>=minimoRecomendado ? '&#128994;' : resultadoReal>=0 ? '&#128993;' : '&#128308;';
-  var semaforoTxt = resultadoReal>=minimoRecomendado ? 'Posicion solida' : resultadoReal>=0 ? 'Atencion: margen justo' : 'Alerta: deficit este mes';
-
-  html += '<div style="background:'+semaforoBg+';border-radius:14px;padding:14px;margin-bottom:12px;text-align:center">';
-  html += '<div style="font-size:32px">'+semaforoIcon+'</div>';
-  html += '<div style="font-size:15px;font-weight:700;color:'+semaforoColor+';margin-top:4px">'+semaforoTxt+'</div>';
-  html += '<div style="font-size:12px;color:#374151;margin-top:2px">'+(ML[m]||m)+'</div></div>';
-
-  // -- INGRESOS --
-  html += '<div class="card" style="margin-bottom:9px">';
-  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Ingresos del mes</div>';
-  html += mkFilaTesoreria('Facturas emitidas (base)', eur(ingTotal), 'var(--t2)', false);
-  html += mkFilaTesoreria('Cobrado', eur(ingCobrado), 'var(--green)', true);
-  if(ingPendiente>0) html += mkFilaTesoreria('Pendiente de cobro', eur(ingPendiente), 'var(--orange)', false);
-  html += mkFilaTesoreria('IVA repercutido (21%)', eur(ivaRepercutido), 'var(--t3)', false);
-  html += '</div>';
-
-  // -- PAGOS ESTE MES --
-  html += '<div class="card" style="margin-bottom:9px">';
-  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Pagos obligatorios este mes</div>';
-
-  if(pagarProvs>0){
-    // Agrupar por proveedor para mostrar la regla de cada uno
-    var gruposVenc = {};
-    provsVencenEste.forEach(function(p){
-      var k = p.proveedor||'Otro';
-      if(!gruposVenc[k]) gruposVenc[k] = {provs:[], total:0, regla:''};
-      gruposVenc[k].provs.push(p);
-      gruposVenc[k].total += Number(p.total||0);
-      gruposVenc[k].regla = diaVencimiento(p);
-    });
-    Object.keys(gruposVenc).forEach(function(prov){
-      var g2 = gruposVenc[prov];
-      var reglaTxt = prov.toLowerCase().indexOf('adbosch')>=0
-        ? 'Adbosch: dia 10 de ' + (vencMes||'?') + ' (mes emision +2)'
-        : prov.toLowerCase().indexOf('berner')>=0
-        ? 'Berner: 30 dias desde emision'
-        : prov + ' - vence este mes';
-      html += '<div style="font-size:11px;color:var(--t3);margin-bottom:4px;margin-top:6px">'+escH(reglaTxt)+'</div>';
-      g2.provs.forEach(function(p){
-        var emision = p.fecha ? ' (emitida '+p.fecha+')' : '';
-        var color = p.estado==='Pagado' ? 'var(--t4)' : 'var(--red)';
-        html += mkFilaTesoreria(
-          escH(p.proveedor)+' '+escH(p.num||'')+escH(emision),
-          eur(p.total), color, false
-        );
-      });
-    });
-    html += '<div style="height:4px"></div>';
-    html += mkFilaTesoreria('TOTAL A PAGAR PROVEEDORES', eur(pagarProvs), 'var(--red)', true);
-    html += '<div style="height:8px"></div>';
-  } else {
-    html += '<div style="font-size:12px;color:var(--t4);padding:6px 0">Sin vencimientos de proveedores este mes</div>';
-  }
-
-  html += mkFilaTesoreria('Gastos fijos mensuales', eur(gfMes), 'var(--orange)', false);
-  if(gvMes>0) html += mkFilaTesoreria('Gastos variables del mes', eur(gvMes), 'var(--orange)', false);
-
-  if(esMesFinQ){
-    html += '<div style="height:6px"></div>';
-    html += '<div style="font-size:11px;color:var(--blue);margin-bottom:4px;font-weight:600">Vence trimestre fiscal</div>';
-    html += mkFilaTesoreria('IVA a pagar Mod.303 (estimado)', eur(Math.max(ivaNeto,0)), 'var(--blue)', false);
-    html += mkFilaTesoreria('IRPF Mod.130 (estimado 20%)', eur(irpfQ), 'var(--blue)', false);
-  }
-
-  html += '</div>';
-
-  // -- MINIMO EN BANCO --
-  html += '<div style="background:#1e293b;border-radius:14px;padding:14px;margin-bottom:9px">';
-  html += '<div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Minimo en banco</div>';
-
-  html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
-  html += '<span style="font-size:12px;color:#cbd5e1">Para pagar proveedores+gastos</span>';
-  html += '<span style="font-size:13px;font-weight:600;color:#fff">'+eur(minimoMes)+'</span></div>';
-
-  if(esMesFinQ){
-    html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
-    html += '<span style="font-size:12px;color:#cbd5e1">+ Impuestos trimestrales</span>';
-    html += '<span style="font-size:13px;font-weight:600;color:#93c5fd">'+eur(irpfQ+Math.max(ivaNeto,0))+'</span></div>';
-  }
-
-  html += '<div style="border-top:1px solid #334155;padding-top:10px;margin-top:6px">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center">';
-  html += '<span style="font-size:12px;color:#94a3b8">Recomendado (+15% margen)</span>';
-  html += '<span style="font-size:20px;font-weight:800;color:#fbbf24">'+eur(minimoRecomendado)+'</span></div></div>';
-  html += '</div>';
-
-  // -- RESULTADO Y PROXIMO MES --
-  html += '<div class="card" style="margin-bottom:9px">';
-  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Resultado del mes</div>';
-  html += mkFilaTesoreria('Cobrado', eur(ingCobrado), 'var(--green)', false);
-  html += mkFilaTesoreria('- Proveedores pagados', '-'+eur(pagarProvs), 'var(--red)', false);
-  html += mkFilaTesoreria('- Gastos fijos', '-'+eur(gfMes), 'var(--orange)', false);
-  if(gvMes>0) html += mkFilaTesoreria('- Gastos variables', '-'+eur(gvMes), 'var(--orange)', false);
-  html += '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">';
-  html += mkFilaTesoreria('RESULTADO NETO', eur(resultadoReal), resultadoReal>=0?'var(--green)':'var(--red)', true);
-  html += '</div></div>';
-
-  // -- AVISO MES SIGUIENTE --
-  if(pagarProvsSig>0 && mSig){
-    html += '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:12px;margin-bottom:9px">';
-    html += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px">&#9888; Reservar para '+(ML[mSig]||mSig)+'</div>';
-    provsVencenSig.forEach(function(p){
-      var esAdbosch2 = (p.proveedor||'').toLowerCase().indexOf('adbosch')>=0;
-      var reglaTxt = esAdbosch2
-        ? 'Adbosch: mes '+p.mes+' -> vence dia 10/'+mesDeVencimiento(p)
-        : 'Berner: emitida '+p.fecha+' -> vence +30 dias ('+mesDeVencimiento(p)+')';
-      html += '<div style="margin-bottom:6px">';
-      html += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#92400e">';
-      html += '<span style="font-weight:600">'+escH(p.proveedor)+' '+escH(p.num||'')+'</span>';
-      html += '<span style="font-weight:700">'+eur(p.total)+'</span></div>';
-      html += '<div style="font-size:10px;color:#b45309;margin-top:1px">'+escH(reglaTxt)+'</div>';
-      html += '</div>';
-    });
-    html += '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #fcd34d">';
-    html += '<span style="font-size:12px;font-weight:700;color:#92400e">Total a tener en cuenta</span>';
-    html += '<span style="font-size:16px;font-weight:800;color:#92400e">'+eur(pagarProvsSig)+'</span></div></div>';
-  }
-
-  g('tes-body').innerHTML = html;
-}
-
-function mkFilaTesoreria(lbl, val, color, negrita){
-  var fw = negrita ? '700' : '400';
-  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">' +
-    '<span style="font-size:12px;color:var(--t2);font-weight:'+fw+'">'+escH(lbl)+'</span>' +
-    '<span style="font-size:13px;font-weight:'+fw+';color:'+color+'">'+val+'</span></div>';
-}
-
 
 // ============================================================
 // INIT TABS
@@ -1059,32 +968,6 @@ function mkSumCard(leftTxt, rightTxt, chips){
 // ============================================================
 // DASHBOARD
 // ============================================================
-
-// ============================================================
-// VENCIMIENTO REAL DE PROVEEDORES
-// Adbosch: dia 10 del mes M+2 (dos meses despues del mes de la factura)
-//   Marzo -> 10 Mayo | Abril -> 10 Junio
-// Berner: 30 dias desde la fecha exacta de emision
-// ============================================================
-function mesDeVencimiento(p){
-  var nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var prov = (p.proveedor||'').toLowerCase();
-  if(prov.indexOf('adbosch') >= 0){
-    var partes = (p.mes||'').split('-');
-    if(partes.length !== 2) return null;
-    var mi = nombres.indexOf(partes[0]);
-    if(mi < 0) return null;
-    var d = new Date(2000 + parseInt(partes[1], 10), mi, 1);
-    d.setMonth(d.getMonth() + 2);
-    return nombres[d.getMonth()] + '-' + String(d.getFullYear()).slice(-2);
-  } else {
-    var d2 = new Date(p.fecha || '');
-    if(isNaN(d2.getTime())) return null;
-    d2.setDate(d2.getDate() + 30);
-    return nombres[d2.getMonth()] + '-' + String(d2.getFullYear()).slice(-2);
-  }
-}
-
 function renderDash(){
   var mAct = 'Abr-26';
   var fM = SD.facturas.filter(function(f){ return f.mes===mAct; });
@@ -1143,29 +1026,35 @@ function renderDash(){
 // ============================================================
 function renderFacts(){
   var srch = (g('fsrch').value||'').toLowerCase();
-  var list = SD.facturas.filter(function(f){ return f.mes===curFT; });
-  if(srch) list = list.filter(function(f){
-    return (f.cliente||'').toLowerCase().includes(srch) ||
-           (f.matricula||'').toLowerCase().includes(srch) ||
-           (f.num||'').toLowerCase().includes(srch);
-  });
+  var modoGlobal = srch.length > 0;
+  var list = modoGlobal
+    ? SD.facturas.filter(function(f){
+        return (f.cliente||'').toLowerCase().includes(srch) ||
+               (f.matricula||'').toLowerCase().includes(srch) ||
+               (f.num||'').toLowerCase().includes(srch) ||
+               (f.concepto||'').toLowerCase().includes(srch);
+      })
+    : SD.facturas.filter(function(f){ return f.mes===curFT; });
 
   var tot = list.reduce(function(a,f){ return a+Number(f.base||0); },0);
   var cob = list.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
   var pen = list.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
 
-  g('f-sum').innerHTML = mkSumCard('Total facturado (base)', eur(tot),
-    mkChip('Cobrado '+eur(cob),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'ca') : ''));
+  var fSumLbl = modoGlobal ? 'Resultados globales ('+list.length+')' : 'Total facturado (base)';
+  g('f-sum').innerHTML = mkSumCard(fSumLbl, eur(tot),
+    mkChip('Cobrado '+eur(cob),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'ca') : '') +
+    (modoGlobal ? mkChip('Busqueda global','cv') : ''));
 
   if(!list.length){
-    g('f-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">Sin facturas en '+(ML[curFT]||curFT)+'</div>';
+    g('f-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">'+(modoGlobal?'Sin resultados para "'+srch+'"':'Sin facturas en '+(ML[curFT]||curFT))+'</div>';
     return;
   }
 
   g('f-list').innerHTML = list.map(function(f){
-    var estCls = f.estado==='Cobrado' ? 'cg' : 'ca';
-    var estTxt = f.estado==='Cobrado' ? 'Cobrado' : 'Pendiente';
-    var sub = (f.fecha||'') + (f.num ? ' - Fac#'+f.num : '');
+    var esAlbaran = f.tipo === 'albaran';
+    var estCls = esAlbaran ? 'cv' : (f.estado==='Cobrado' ? 'cg' : 'ca');
+    var estTxt = esAlbaran ? 'Albaran' : (f.estado==='Cobrado' ? 'Cobrado' : 'Pendiente');
+    var sub = (modoGlobal?(f.mes||'')+' | ':'') + (f.fecha||'') + (f.num ? ' - Fac#'+f.num : '');
     var conc = f.concepto ? '<div class="rw-sub" style="font-style:italic">'+(f.concepto.length>55?f.concepto.slice(0,55)+'...':escH(f.concepto))+'</div>' : '';
     var acts =
       mkAct('Editar','edit','editFact(\''+f.id+'\')') +
@@ -1189,29 +1078,33 @@ function renderFacts(){
 // ============================================================
 function renderProvs(){
   var srch = (g('psrch').value||'').toLowerCase();
-  var list = SD.proveedores.filter(function(p){ return p.mes===curPT; });
-  if(srch) list = list.filter(function(p){
-    return (p.proveedor||'').toLowerCase().includes(srch) ||
-           (p.num||'').toLowerCase().includes(srch) ||
-           (p.concepto||'').toLowerCase().includes(srch);
-  });
+  var modoGlobalP = srch.length > 0;
+  var list = modoGlobalP
+    ? SD.proveedores.filter(function(p){
+        return (p.proveedor||'').toLowerCase().includes(srch) ||
+               (p.num||'').toLowerCase().includes(srch) ||
+               (p.concepto||'').toLowerCase().includes(srch);
+      })
+    : SD.proveedores.filter(function(p){ return p.mes===curPT; });
 
   var tot = list.reduce(function(a,p){ return a+Number(p.base||0); },0);
   var pag = list.filter(function(p){ return p.estado==='Pagado'; }).reduce(function(a,p){ return a+Number(p.base||0); },0);
   var pen = list.filter(function(p){ return p.estado==='Pendiente'; }).reduce(function(a,p){ return a+Number(p.base||0); },0);
 
-  g('p-sum').innerHTML = mkSumCard('Total compras (base)', eur(tot),
-    mkChip('Pagado '+eur(pag),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'cr') : ''));
+  var pSumLbl = modoGlobalP ? 'Resultados globales ('+list.length+')' : 'Total compras (base)';
+  g('p-sum').innerHTML = mkSumCard(pSumLbl, eur(tot),
+    mkChip('Pagado '+eur(pag),'cg') + (pen>0 ? mkChip('Pend. '+eur(pen),'cr') : '') +
+    (modoGlobalP ? mkChip('Busqueda global','cv') : ''));
 
   if(!list.length){
-    g('p-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">Sin compras en '+(ML[curPT]||curPT)+'</div>';
+    g('p-list').innerHTML = '<div style="text-align:center;color:var(--t4);padding:30px;font-size:13px">'+(modoGlobalP?'Sin resultados para "'+srch+'"':'Sin compras en '+(ML[curPT]||curPT))+'</div>';
     return;
   }
 
   g('p-list').innerHTML = list.map(function(p){
     var estCls = p.estado==='Pagado' ? 'cg' : 'cr';
     var estTxt = p.estado==='Pagado' ? 'Pagado' : 'Pendiente';
-    var sub = (p.fecha||'') + (p.num ? ' - Fac#'+p.num : '');
+    var sub = (modoGlobalP?(p.mes||'')+' | ':'') + (p.fecha||'') + (p.num ? ' - Fac#'+p.num : '');
     var conc = p.concepto ? '<div class="rw-sub" style="font-style:italic">'+(p.concepto.length>55?p.concepto.slice(0,55)+'...':escH(p.concepto))+'</div>' : '';
     var amtColor = p.base<0 ? 'var(--red)' : 'var(--t1)';
     var acts =
@@ -1270,6 +1163,255 @@ function renderGastos(){
     var amt = '<div class="rw-amt">'+eur(gv.importe)+'</div><div style="font-size:10px;color:var(--t3)">'+escH(gv.pago||'')+'</div>';
     return mkRow(main, amt);
   }).join('');
+}
+
+
+// ============================================================
+// TESORERIA
+// ============================================================
+function mesDeVencimiento(p){
+  // REGLAS DEFINITIVAS:
+  // Adbosch: dia 10 del mes M+2 (dos meses despues del MES de la factura)
+  //   Marzo  -> 10 Mayo  | Abril -> 10 Junio
+  // Berner:  exactamente 30 dias desde la fecha de emision
+  //   20/04  -> 20 Mayo
+  var nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var prov = (p.proveedor||'').toLowerCase();
+  if(prov.indexOf('adbosch') >= 0){
+    var partes = (p.mes||'').split('-');
+    if(partes.length !== 2) return null;
+    var mi = nombres.indexOf(partes[0]);
+    if(mi < 0) return null;
+    var d = new Date(2000 + parseInt(partes[1], 10), mi, 1);
+    d.setMonth(d.getMonth() + 2);
+    return nombres[d.getMonth()] + '-' + String(d.getFullYear()).slice(-2);
+  } else {
+    var d2 = new Date(p.fecha || '');
+    if(isNaN(d2.getTime())) return null;
+    d2.setDate(d2.getDate() + 30);
+    return nombres[d2.getMonth()] + '-' + String(d2.getFullYear()).slice(-2);
+  }
+}
+
+function diaVencimiento(p){
+  var prov = (p.proveedor||'').toLowerCase();
+  if(prov.indexOf('adbosch') >= 0) return 'dia 10';
+  return 'al mes';
+}
+
+function renderTesoreria(){
+  var tet = g('tes-tabs');
+  if(!tet) return;
+
+  var m = curTET;
+  var idx = MESES_I.indexOf(m);
+  var mSig = idx<MESES_I.length-1 ? MESES_I[idx+1] : null;
+
+  // Ingresos del mes seleccionado
+  var facs = SD.facturas.filter(function(f){ return f.mes===m; });
+  var ingTotal = facs.reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var ingCobrado = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var ingPendiente = facs.filter(function(f){ return f.estado==='Pendiente'; }).reduce(function(a,f){ return a+Number(f.base||0); },0);
+  var ivaRepercutido = facs.filter(function(f){ return f.estado==='Cobrado'; }).reduce(function(a,f){ return a+Number(f.iva||0); },0);
+
+  // Proveedores que vencen ESTE MES (calculado por regla real de cada proveedor)
+  var provsVencenEste = SD.proveedores.filter(function(p){
+    return mesDeVencimiento(p) === m;
+  });
+  var pagarProvs = provsVencenEste.reduce(function(a,p){ return a+Number(p.total||0); },0);
+
+  // Proveedores que vencen EL MES SIGUIENTE
+  var provsVencenSig = mSig ? SD.proveedores.filter(function(p){
+    return mesDeVencimiento(p) === mSig;
+  }) : [];
+  var pagarProvsSig = provsVencenSig.reduce(function(a,p){ return a+Number(p.total||0); },0);
+
+  // IVA soportado: facturas del mes actual (para Modelo 303)
+  var provsAct = SD.proveedores.filter(function(p){ return p.mes===m; });
+  var ivaSoportado = provsAct.reduce(function(a,p){ return a+Number(p.iva||0); },0);
+
+  // Gastos fijos mensual
+  var gfMes = SD.gastosFijos.reduce(function(a,x){ return a+Number(x.importe_mes||0); },0);
+
+  // Gastos variables del mes
+  var gvMes = SD.gastosVariables.filter(function(x){ return x.mes===m; }).reduce(function(a,x){ return a+Number(x.importe||0); },0);
+
+  // IVA neto a pagar (trimestral - estimacion)
+  var ivaNeto = ivaRepercutido - ivaSoportado;
+
+  // Calculo IRPF trimestral estimado (20% rdto neto)
+  // Buscar a que trimestre pertenece el mes
+  var trimMap = {
+    'Ene-26':1,'Feb-26':1,'Mar-26':1,
+    'Abr-26':2,'May-26':2,'Jun-26':2,
+    'Jul-26':3,'Ago-26':3,'Sep-26':3,
+    'Oct-26':4,'Nov-26':4,'Dic-26':4
+  };
+  var qMeses = {
+    1:['Ene-26','Feb-26','Mar-26'],
+    2:['Abr-26','May-26','Jun-26'],
+    3:['Jul-26','Ago-26','Sep-26'],
+    4:['Oct-26','Nov-26','Dic-26']
+  };
+  var qNum = trimMap[m];
+  var qMs = qMeses[qNum]||[m];
+  var qIng = qMs.reduce(function(a,qm){
+    return a+SD.facturas.filter(function(f){ return f.mes===qm&&f.estado==='Cobrado'; }).reduce(function(s,f){ return s+Number(f.base||0); },0);
+  },0);
+  var qComp = qMs.reduce(function(a,qm){
+    return a+SD.proveedores.filter(function(p){ return p.mes===qm; }).reduce(function(s,p){ return s+Number(p.base||0); },0);
+  },0);
+  var qGv = qMs.reduce(function(a,qm){
+    return a+SD.gastosVariables.filter(function(x){ return x.mes===qm; }).reduce(function(s,x){ return s+Number(x.importe||0); },0);
+  },0);
+  var qRnd = qIng - qComp - qGv - gfMes*3;
+  var irpfQ = qRnd>0 ? qRnd*0.20 : 0;
+  var esMesFinQ = (m==='Mar-26'||m==='Jun-26'||m==='Sep-26'||m==='Dic-26');
+
+  // MINIMO EN BANCO este mes
+  var minimoMes = pagarProvs + gfMes + gvMes;
+  // MINIMO si ademas vence IRPF/IVA este mes (trimestral)
+  var minimoConImpuestos = minimoMes + (esMesFinQ ? irpfQ + Math.max(ivaNeto,0) : 0);
+
+  // Resultado real del mes
+  var resultadoReal = ingCobrado - pagarProvs - gfMes - gvMes;
+
+  // Margen de seguridad (15% sobre minimo)
+  var margenSeg = minimoConImpuestos * 0.15;
+  var minimoRecomendado = minimoConImpuestos + margenSeg;
+
+  var html = '';
+
+  // -- SEMAFORO RESUMEN --
+  var semaforoColor = resultadoReal>=0 ? '#16a34a' : '#dc2626';
+  var semaforoBg = resultadoReal>=0 ? '#dcfce7' : '#fee2e2';
+  var semaforoIcon = resultadoReal>=minimoRecomendado ? '&#128994;' : resultadoReal>=0 ? '&#128993;' : '&#128308;';
+  var semaforoTxt = resultadoReal>=minimoRecomendado ? 'Posicion solida' : resultadoReal>=0 ? 'Atencion: margen justo' : 'Alerta: deficit este mes';
+
+  html += '<div style="background:'+semaforoBg+';border-radius:14px;padding:14px;margin-bottom:12px;text-align:center">';
+  html += '<div style="font-size:32px">'+semaforoIcon+'</div>';
+  html += '<div style="font-size:15px;font-weight:700;color:'+semaforoColor+';margin-top:4px">'+semaforoTxt+'</div>';
+  html += '<div style="font-size:12px;color:#374151;margin-top:2px">'+(ML[m]||m)+'</div></div>';
+
+  // -- INGRESOS --
+  html += '<div class="card" style="margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Ingresos del mes</div>';
+  html += mkFilaTesoreria('Facturas emitidas (base)', eur(ingTotal), 'var(--t2)', false);
+  html += mkFilaTesoreria('Cobrado', eur(ingCobrado), 'var(--green)', true);
+  if(ingPendiente>0) html += mkFilaTesoreria('Pendiente de cobro', eur(ingPendiente), 'var(--orange)', false);
+  html += mkFilaTesoreria('IVA repercutido (21%)', eur(ivaRepercutido), 'var(--t3)', false);
+  html += '</div>';
+
+  // -- PAGOS ESTE MES --
+  html += '<div class="card" style="margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Pagos obligatorios este mes</div>';
+
+  if(pagarProvs>0){
+    // Agrupar por proveedor para mostrar la regla de cada uno
+    var gruposVenc = {};
+    provsVencenEste.forEach(function(p){
+      var k = p.proveedor||'Otro';
+      if(!gruposVenc[k]) gruposVenc[k] = {provs:[], total:0, regla:''};
+      gruposVenc[k].provs.push(p);
+      gruposVenc[k].total += Number(p.total||0);
+      gruposVenc[k].regla = diaVencimiento(p);
+    });
+    Object.keys(gruposVenc).forEach(function(prov){
+      var g2 = gruposVenc[prov];
+      var reglaTxt = prov.toLowerCase().indexOf('adbosch')>=0
+        ? 'Adbosch - vence dia 10 este mes'
+        : prov.toLowerCase().indexOf('berner')>=0
+        ? 'Berner - vence al mes de emision'
+        : prov + ' - vence este mes';
+      html += '<div style="font-size:11px;color:var(--t3);margin-bottom:4px;margin-top:6px">'+escH(reglaTxt)+'</div>';
+      g2.provs.forEach(function(p){
+        var emision = p.fecha ? ' (emitida '+p.fecha+')' : '';
+        var color = p.estado==='Pagado' ? 'var(--t4)' : 'var(--red)';
+        html += mkFilaTesoreria(
+          escH(p.proveedor)+' '+escH(p.num||'')+escH(emision),
+          eur(p.total), color, false
+        );
+      });
+    });
+    html += '<div style="height:4px"></div>';
+    html += mkFilaTesoreria('TOTAL A PAGAR PROVEEDORES', eur(pagarProvs), 'var(--red)', true);
+    html += '<div style="height:8px"></div>';
+  } else {
+    html += '<div style="font-size:12px;color:var(--t4);padding:6px 0">Sin vencimientos de proveedores este mes</div>';
+  }
+
+  html += mkFilaTesoreria('Gastos fijos mensuales', eur(gfMes), 'var(--orange)', false);
+  if(gvMes>0) html += mkFilaTesoreria('Gastos variables del mes', eur(gvMes), 'var(--orange)', false);
+
+  if(esMesFinQ){
+    html += '<div style="height:6px"></div>';
+    html += '<div style="font-size:11px;color:var(--blue);margin-bottom:4px;font-weight:600">Vence trimestre fiscal</div>';
+    html += mkFilaTesoreria('IVA a pagar Mod.303 (estimado)', eur(Math.max(ivaNeto,0)), 'var(--blue)', false);
+    html += mkFilaTesoreria('IRPF Mod.130 (estimado 20%)', eur(irpfQ), 'var(--blue)', false);
+  }
+
+  html += '</div>';
+
+  // -- MINIMO EN BANCO --
+  html += '<div style="background:#1e293b;border-radius:14px;padding:14px;margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Minimo en banco</div>';
+
+  html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
+  html += '<span style="font-size:12px;color:#cbd5e1">Para pagar proveedores+gastos</span>';
+  html += '<span style="font-size:13px;font-weight:600;color:#fff">'+eur(minimoMes)+'</span></div>';
+
+  if(esMesFinQ){
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px">';
+    html += '<span style="font-size:12px;color:#cbd5e1">+ Impuestos trimestrales</span>';
+    html += '<span style="font-size:13px;font-weight:600;color:#93c5fd">'+eur(irpfQ+Math.max(ivaNeto,0))+'</span></div>';
+  }
+
+  html += '<div style="border-top:1px solid #334155;padding-top:10px;margin-top:6px">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+  html += '<span style="font-size:12px;color:#94a3b8">Recomendado (+15% margen)</span>';
+  html += '<span style="font-size:20px;font-weight:800;color:#fbbf24">'+eur(minimoRecomendado)+'</span></div></div>';
+  html += '</div>';
+
+  // -- RESULTADO Y PROXIMO MES --
+  html += '<div class="card" style="margin-bottom:9px">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Resultado del mes</div>';
+  html += mkFilaTesoreria('Cobrado', eur(ingCobrado), 'var(--green)', false);
+  html += mkFilaTesoreria('- Proveedores pagados', '-'+eur(pagarProvs), 'var(--red)', false);
+  html += mkFilaTesoreria('- Gastos fijos', '-'+eur(gfMes), 'var(--orange)', false);
+  if(gvMes>0) html += mkFilaTesoreria('- Gastos variables', '-'+eur(gvMes), 'var(--orange)', false);
+  html += '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">';
+  html += mkFilaTesoreria('RESULTADO NETO', eur(resultadoReal), resultadoReal>=0?'var(--green)':'var(--red)', true);
+  html += '</div></div>';
+
+  // -- AVISO MES SIGUIENTE --
+  if(pagarProvsSig>0 && mSig){
+    html += '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:12px;margin-bottom:9px">';
+    html += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px">&#9888; Reservar para '+(ML[mSig]||mSig)+'</div>';
+    provsVencenSig.forEach(function(p){
+      var esAdbosch = (p.proveedor||'').toLowerCase().indexOf('adbosch')>=0;
+      var reglaTxt = esAdbosch
+        ? 'Adbosch: emitida '+p.fecha+' -> vence dia 10/'+mSig
+        : 'Berner: emitida '+p.fecha+' -> vence al mes';
+      html += '<div style="margin-bottom:6px">';
+      html += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#92400e">';
+      html += '<span style="font-weight:600">'+escH(p.proveedor)+' '+escH(p.num||'')+'</span>';
+      html += '<span style="font-weight:700">'+eur(p.total)+'</span></div>';
+      html += '<div style="font-size:10px;color:#b45309;margin-top:1px">'+escH(reglaTxt)+'</div>';
+      html += '</div>';
+    });
+    html += '<div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #fcd34d">';
+    html += '<span style="font-size:12px;font-weight:700;color:#92400e">Total a tener en cuenta</span>';
+    html += '<span style="font-size:16px;font-weight:800;color:#92400e">'+eur(pagarProvsSig)+'</span></div></div>';
+  }
+
+  g('tes-body').innerHTML = html;
+}
+
+function mkFilaTesoreria(lbl, val, color, negrita){
+  var fw = negrita ? '700' : '400';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)">' +
+    '<span style="font-size:12px;color:var(--t2);font-weight:'+fw+'">'+escH(lbl)+'</span>' +
+    '<span style="font-size:13px;font-weight:'+fw+';color:'+color+'">'+val+'</span></div>';
 }
 
 // ============================================================
@@ -1366,27 +1508,431 @@ function renderFiscal(){
     '</div>';
 }
 
+
+// ============================================================
+// AUDITORIA - registro de actividad
+// ============================================================
+function nowStr(){
+  var d = new Date();
+  var pad = function(n){ return n.toString().padStart(2,'0'); };
+  return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+function logActividad(accion, tipo, detalle){
+  if(!SD.actividad) SD.actividad = [];
+  SD.actividad.unshift({
+    ts: nowStr(),
+    usuario: USER||'?',
+    accion: accion,   // 'crear' | 'editar' | 'eliminar'
+    tipo: tipo,       // 'factura' | 'proveedor' | 'gasto_fijo' | 'gasto_variable' | 'perfil'
+    detalle: detalle  // texto descriptivo
+  });
+  // Guardar solo las ultimas 100 acciones
+  if(SD.actividad.length > 100) SD.actividad = SD.actividad.slice(0,100);
+}
+
+
+
+// ============================================================
+// NUMERACION AUTOMATICA DE FACTURAS
+// ============================================================
+function getNextNumSeq(){
+  // Buscar el mayor numero secuencial (3 ultimos digitos) en todas las facturas
+  var maxSeqFacts = 56; // ultima conocida es 056
+  SD.facturas.forEach(function(f){
+    if(f.num && f.num.length >= 3){
+      var seq = parseInt(f.num.slice(-3), 10);
+      if(!isNaN(seq) && seq > maxSeqFacts) maxSeqFacts = seq;
+    }
+  });
+  // numNext ya representa el PROXIMO a usar (no el ultimo)
+  // Devolver el mayor entre numNext y maxSeqFacts+1
+  return Math.max(SD.numNext, maxSeqFacts + 1);
+}
+
+function generarNumFact(fecha){
+  // Formato: DDMMAA + NNN (3 digitos con cero a la izquierda)
+  // Ejemplo: 070426056 = dia 07, mes 04, ano 26, secuencial 056
+  var d = fecha ? new Date(fecha) : new Date();
+  var dd  = d.getDate().toString().padStart(2,'0');
+  var mm  = (d.getMonth()+1).toString().padStart(2,'0');
+  var aa  = d.getFullYear().toString().slice(-2);
+  var seq = getNextNumSeq();
+  var nnn = seq.toString().padStart(3,'0');
+  return dd + mm + aa + nnn;
+}
+
+
+function setTipoFact(tipo){
+  g('mf-tipo').value = tipo;
+  var btnF = g('tipo-factura-btn');
+  var btnA = g('tipo-albaran-btn');
+  var info = g('tipo-info');
+  var numWrap  = g('mf-num') ? g('mf-num').closest ? null : null : null;
+  var numHint  = g('mf-num-hint');
+  var numInput = g('mf-num');
+  var ivaWrap  = g('mf-iva-wrap');
+  var baseLbl  = g('mf-base-lbl');
+  var saveBtn  = g('mf-save-btn');
+
+  if(tipo === 'factura'){
+    btnF.style.background = 'var(--blue)';
+    btnF.style.borderColor = 'var(--blue)';
+    btnF.style.color = '#fff';
+    btnA.style.background = 'var(--card)';
+    btnA.style.borderColor = 'var(--border2)';
+    btnA.style.color = 'var(--t2)';
+    info.style.background = '#eff6ff';
+    info.style.color = 'var(--blue)';
+    info.textContent = 'Con numero de factura y desglose de IVA';
+    if(ivaWrap) ivaWrap.style.display = '';
+    if(baseLbl) baseLbl.textContent = 'Base Imponible (sin IVA)';
+    if(numInput) numInput.placeholder = 'Auto';
+    if(numHint) numHint.style.display = '';
+    if(saveBtn) saveBtn.textContent = 'Guardar Factura';
+    // Generar numero automatico
+    actualizarNumFact();
+  } else {
+    btnA.style.background = '#7c3aed';
+    btnA.style.borderColor = '#7c3aed';
+    btnA.style.color = '#fff';
+    btnF.style.background = 'var(--card)';
+    btnF.style.borderColor = 'var(--border2)';
+    btnF.style.color = 'var(--t2)';
+    info.style.background = '#faf5ff';
+    info.style.color = '#7c3aed';
+    info.textContent = 'Sin numero de factura. Solo registro interno del trabajo.';
+    if(ivaWrap) ivaWrap.style.display = 'none';
+    if(baseLbl) baseLbl.textContent = 'Importe cobrado (total)';
+    if(numInput){ numInput.value = ''; numInput.placeholder = 'Sin numero (opcional ref.)'; }
+    if(numHint) numHint.style.display = 'none';
+    // Limpiar IVA
+    var ivaEl = g('mf-iva'); if(ivaEl) ivaEl.value = '0.00';
+    var totEl = g('mf-tot'); if(totEl) totEl.value = '';
+    if(saveBtn) saveBtn.textContent = 'Guardar Albaran';
+  }
+  checkDupFact();
+}
+
+function actualizarNumFact(){
+  // Se llama cuando cambia la fecha para actualizar el numero sugerido
+  var fechaEl = g('mf-fecha');
+  var numEl   = g('mf-num');
+  var eid     = g('mf-id').value;
+  if(!numEl || eid) return; // no sobreescribir si es edicion
+  var sugerido = generarNumFact(fechaEl ? fechaEl.value : null);
+  numEl.value = sugerido;
+  checkDupFact();
+}
+
+
+// ============================================================
+// AUTOCOMPLETADO CLIENTE Y MATRICULA
+// ============================================================
+function acClose(listId){
+  var el = g(listId);
+  if(el) el.classList.remove('open');
+}
+
+function resaltar(texto, q){
+  if(!q) return escH(texto);
+  var t = escH(texto);
+  var ql = q.toLowerCase();
+  var tl = t.toLowerCase();
+  var idx = tl.indexOf(ql);
+  if(idx < 0) return t;
+  return t.slice(0,idx) + '<b>' + t.slice(idx, idx+ql.length) + '</b>' + t.slice(idx+ql.length);
+}
+
+function acCliente(val){
+  var list = g('ac-cli-list');
+  if(!list) return;
+  var q = (val||'').trim().toLowerCase();
+
+  var mapaClientes = {};
+  SD.facturas.forEach(function(f){
+    if(!f.cliente || f.cliente === 'Particular') return;
+    var k = f.cliente.toLowerCase();
+    if(!mapaClientes[k] || (f.fecha||'') > (mapaClientes[k].fecha||'')){
+      mapaClientes[k] = {
+        cliente: f.cliente,
+        matricula: f.matricula||'',
+        concepto: f.concepto||'',
+        fecha: f.fecha||''
+      };
+    }
+  });
+
+  var resultados = Object.values(mapaClientes).filter(function(c){
+    return !q || c.cliente.toLowerCase().includes(q);
+  }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,8);
+
+  if(!resultados.length || !q){
+    list.classList.remove('open');
+    return;
+  }
+
+  list.innerHTML = resultados.map(function(c){
+    var datos = JSON.stringify({cliente:c.cliente,matricula:c.matricula,concepto:c.concepto});
+    return '<div class="ac-item" onmousedown="acSelectCliente(' + escH(datos) + ')">' +
+      resaltar(c.cliente, q) +
+      (c.matricula ? '<small>Matricula: ' + escH(c.matricula) + (c.concepto ? ' | ' + escH(c.concepto.slice(0,40)) : '') + '</small>' : '') +
+      '</div>';
+  }).join('');
+  list.classList.add('open');
+}
+
+function acSelectCliente(datosStr){
+  var datos = typeof datosStr === 'string' ? JSON.parse(datosStr) : datosStr;
+  var cli = g('mf-cli'); if(cli) cli.value = datos.cliente||'';
+  var mat = g('mf-mat'); if(mat && datos.matricula) mat.value = datos.matricula;
+  acClose('ac-cli-list');
+  acClose('ac-mat-list');
+  checkDupFact();
+  setTimeout(function(){ var c=g('mf-conc'); if(c) c.focus(); }, 100);
+}
+
+function acMatricula(val){
+  var list = g('ac-mat-list');
+  if(!list) return;
+  var q = (val||'').trim().toLowerCase();
+
+  var mapaMat = {};
+  SD.facturas.forEach(function(f){
+    if(!f.matricula) return;
+    var k = f.matricula.toLowerCase();
+    if(!mapaMat[k] || (f.fecha||'') > (mapaMat[k].fecha||'')){
+      mapaMat[k] = {
+        matricula: f.matricula,
+        cliente: f.cliente||'',
+        concepto: f.concepto||'',
+        fecha: f.fecha||''
+      };
+    }
+  });
+
+  var resultados = Object.values(mapaMat).filter(function(m){
+    return !q || m.matricula.toLowerCase().includes(q);
+  }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,8);
+
+  if(!resultados.length){
+    list.classList.remove('open');
+    return;
+  }
+
+  list.innerHTML = resultados.map(function(m){
+    var datos = JSON.stringify({matricula:m.matricula,cliente:m.cliente,concepto:m.concepto});
+    return '<div class="ac-item" onmousedown="acSelectMatricula(' + escH(datos) + ')">' +
+      resaltar(m.matricula, q) +
+      '<small>' + escH(m.cliente) + (m.concepto ? ' | ' + escH(m.concepto.slice(0,35)) : '') + '</small>' +
+      '</div>';
+  }).join('');
+  list.classList.add('open');
+}
+
+function acSelectMatricula(datosStr){
+  var datos = typeof datosStr === 'string' ? JSON.parse(datosStr) : datosStr;
+  var mat = g('mf-mat'); if(mat) mat.value = datos.matricula||'';
+  var cli = g('mf-cli');
+  if(cli && !cli.value.trim() && datos.cliente && datos.cliente !== 'Particular'){
+    cli.value = datos.cliente;
+  }
+  acClose('ac-mat-list');
+  checkDupFact();
+}
+
+// ============================================================
+// DETECCION DE DUPLICADOS
+// ============================================================
+function checkDupFact(){
+  var warn = g('mf-dup-warn');
+  var btn  = g('mf-save-btn');
+  if(!warn) return;
+
+  var eid    = g('mf-id').value;
+  var num    = (g('mf-num').value||'').trim().toLowerCase();
+  var cli    = (g('mf-cli').value||'').trim().toLowerCase();
+  var base   = parseFloat(g('mf-base').value)||0;
+  var fecha  = (g('mf-fecha').value||'').trim();
+  var duplicados = [];
+
+  SD.facturas.forEach(function(f){
+    if(f.id === eid) return; // ignorar el registro que se esta editando
+
+    var coincideNum   = num && f.num && f.num.toLowerCase() === num;
+    var coincideBase  = base>0 && Math.abs(Number(f.base||0)-base)<0.02;
+    var coincideCli   = cli && (f.cliente||'').toLowerCase() === cli;
+    var coincideFecha = fecha && f.fecha === fecha;
+
+    if(coincideNum){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Numero de factura duplicado: <b>' + escH(f.num) + '</b>',
+        detalle: (f.cliente||'') + ' &bull; ' + f.fecha + ' &bull; ' + eur(f.base) + ' base'
+      });
+    } else if(coincideBase && coincideCli && coincideFecha){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Misma fecha, cliente e importe',
+        detalle: (f.cliente||'') + ' &bull; ' + f.fecha + ' &bull; ' + eur(f.base) + (f.num?' &bull; Fac#'+f.num:'')
+      });
+    } else if(coincideBase && coincideCli){
+      duplicados.push({
+        nivel: 'medio',
+        motivo: 'Mismo cliente e importe en otro mes',
+        detalle: (f.cliente||'') + ' &bull; ' + (f.mes||'') + ' &bull; ' + eur(f.base)
+      });
+    } else if(coincideNum === false && coincideBase && coincideFecha){
+      duplicados.push({
+        nivel: 'bajo',
+        motivo: 'Mismo importe y fecha con otro cliente',
+        detalle: (f.cliente||'-') + ' &bull; ' + f.fecha + ' &bull; ' + eur(f.base)
+      });
+    }
+  });
+
+  if(!duplicados.length){
+    warn.style.display = 'none';
+    if(btn){ btn.style.background='var(--blue)'; btn.textContent='Guardar Factura'; }
+    return;
+  }
+
+  // Ordenar por nivel
+  duplicados.sort(function(a,b){ return a.nivel==='alto'?-1:b.nivel==='alto'?1:0; });
+  var html2 = '';
+  duplicados.forEach(function(d){
+    var ic = d.nivel==='alto' ? '&#128721;' : d.nivel==='medio' ? '&#9888;&#65039;' : '&#8505;&#65039;';
+    html2 += '<div style="margin-bottom:6px"><b>'+ic+' '+d.motivo+'</b><br><span style="color:#92400e">'+d.detalle+'</span></div>';
+  });
+
+  var hayAlto = duplicados.some(function(d){ return d.nivel==='alto'; });
+  warn.innerHTML = '<b style="font-size:13px">&#128721; Posible duplicado detectado</b><br><br>' + html2 +
+    (hayAlto
+      ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f59e0b">Revisa bien antes de guardar. Puedes continuar si es correcto.</div>'
+      : '');
+  warn.style.display = 'block';
+
+  if(btn){
+    if(hayAlto){
+      btn.style.background = '#d97706';
+      btn.textContent = 'Guardar igualmente (posible duplicado)';
+    } else {
+      btn.style.background = '#2563eb';
+      btn.textContent = 'Guardar Factura';
+    }
+  }
+}
+
+function checkDupProv(){
+  var warn = g('mp-dup-warn');
+  var btn  = g('mp-save-btn');
+  if(!warn) return;
+
+  var eid    = g('mp-id').value;
+  var num    = (g('mp-num').value||'').trim().toLowerCase();
+  var prov   = (g('mp-prov').value||'').trim().toLowerCase();
+  var base   = parseFloat(g('mp-base').value)||0;
+  var fecha  = (g('mp-fecha').value||'').trim();
+  var duplicados = [];
+
+  SD.proveedores.forEach(function(p){
+    if(p.id === eid) return;
+
+    var coincideNum  = num && p.num && p.num.toLowerCase() === num;
+    var coincideBase = base!==0 && Math.abs(Number(p.base||0)-base)<0.02;
+    var coincideProv = prov && (p.proveedor||'').toLowerCase() === prov;
+    var coincideFecha= fecha && p.fecha === fecha;
+
+    if(coincideNum && coincideProv){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Numero de factura duplicado: <b>' + escH(p.num) + '</b> de ' + escH(p.proveedor||''),
+        detalle: (p.proveedor||'') + ' &bull; ' + p.fecha + ' &bull; ' + eur(p.base) + ' base'
+      });
+    } else if(coincideNum){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Numero de factura ya existe: <b>' + escH(p.num) + '</b>',
+        detalle: (p.proveedor||'') + ' &bull; ' + p.fecha + ' &bull; ' + eur(p.base) + ' base'
+      });
+    } else if(coincideBase && coincideProv && coincideFecha){
+      duplicados.push({
+        nivel: 'alto',
+        motivo: 'Mismo proveedor, fecha e importe',
+        detalle: (p.proveedor||'') + ' &bull; ' + p.fecha + ' &bull; ' + eur(p.base)
+      });
+    } else if(coincideBase && coincideProv){
+      duplicados.push({
+        nivel: 'medio',
+        motivo: 'Mismo proveedor e importe en otro mes',
+        detalle: (p.proveedor||'') + ' &bull; ' + (p.mes||'') + ' &bull; ' + eur(p.base)
+      });
+    }
+  });
+
+  if(!duplicados.length){
+    warn.style.display = 'none';
+    if(btn){ btn.style.background='var(--blue)'; btn.textContent='Guardar'; }
+    return;
+  }
+
+  duplicados.sort(function(a,b){ return a.nivel==='alto'?-1:b.nivel==='alto'?1:0; });
+  var html2 = '';
+  duplicados.forEach(function(d){
+    var ic = d.nivel==='alto' ? '&#128721;' : '&#9888;&#65039;';
+    html2 += '<div style="margin-bottom:6px"><b>'+ic+' '+d.motivo+'</b><br><span style="color:#92400e">'+d.detalle+'</span></div>';
+  });
+
+  var hayAlto = duplicados.some(function(d){ return d.nivel==='alto'; });
+  warn.innerHTML = '<b style="font-size:13px">&#128721; Posible duplicado detectado</b><br><br>' + html2 +
+    (hayAlto ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f59e0b">Revisa antes de guardar. Puedes continuar si es correcto.</div>' : '');
+  warn.style.display = 'block';
+
+  if(btn){
+    btn.style.background = hayAlto ? '#d97706' : '#2563eb';
+    btn.textContent = hayAlto ? 'Guardar igualmente (posible duplicado)' : 'Guardar';
+  }
+}
+
 // ============================================================
 // FACTURA CRUD
 // ============================================================
 function calcF(){
   var b = parseFloat(g('mf-base').value)||0;
-  var iv = Math.round(b*21)/100;
-  g('mf-iva').value = iv.toFixed(2);
-  g('mf-tot').value = (b+iv).toFixed(2);
+  var tipo = g('mf-tipo') ? g('mf-tipo').value : 'factura';
+  if(tipo === 'albaran'){
+    // Para albaran: el importe es el total, sin IVA
+    var ivaEl = g('mf-iva'); if(ivaEl) ivaEl.value = '0.00';
+    var totEl = g('mf-tot'); if(totEl) totEl.value = b.toFixed(2);
+  } else {
+    var iv = Math.round(b*21)/100;
+    g('mf-iva').value = iv.toFixed(2);
+    g('mf-tot').value = (b+iv).toFixed(2);
+  }
 }
 
 function openFact(){
   g('mf-tit').textContent='Nueva Factura de Ingreso';
   g('mf-id').value='';
-  g('mf-fecha').value=new Date().toISOString().slice(0,10);
+  acClose('ac-cli-list'); acClose('ac-mat-list');
+  var dw=g('mf-dup-warn'); if(dw){dw.style.display='none';}
+  var sb=g('mf-save-btn'); if(sb){sb.style.background='var(--blue)';sb.textContent='Guardar Factura';}
+  var hoy = new Date().toISOString().slice(0,10);
+  g('mf-fecha').value=hoy;
+  setTimeout(function(){
+    actualizarNumFact();
+    var hint=g('mf-num-hint');
+    if(hint){ var seq=getNextNumSeq(); hint.textContent='(secuencial: '+seq.toString().padStart(3,'0')+')'; }
+  }, 50);
   g('mf-num').value=''; g('mf-cli').value=''; g('mf-mat').value='';
   g('mf-base').value=''; g('mf-iva').value=''; g('mf-tot').value='';
   g('mf-conc').value=''; g('mf-pago').value='Transferencia'; g('mf-est').value='Cobrado';
   g('mf-mes').value=curFT;
+  var tipoEl=g('mf-tipo'); if(tipoEl) tipoEl.value='factura';
+  setTipoFact('factura');
   g('mf').classList.add('on');
 }
-function closeFact(){ g('mf').classList.remove('on'); }
+function closeFact(){ g('mf').classList.remove('on'); acClose('ac-cli-list'); acClose('ac-mat-list'); }
 
 function editFact(id){
   var f = SD.facturas.find(function(x){ return x.id===id; }); if(!f) return;
@@ -1397,32 +1943,52 @@ function editFact(id){
   g('mf-base').value=f.base||''; g('mf-iva').value=f.iva||''; g('mf-tot').value=f.total||'';
   g('mf-conc').value=f.concepto||''; g('mf-pago').value=f.pago||'Transferencia';
   g('mf-est').value=f.estado||'Cobrado';
+  var tipoEdit = f.tipo||'factura';
+  var tipoElE=g('mf-tipo'); if(tipoElE) tipoElE.value=tipoEdit;
+  setTipoFact(tipoEdit);
   g('mf').classList.add('on');
+  var hintE=g('mf-num-hint'); if(hintE) hintE.textContent='(editando)';
+  setTimeout(checkDupFact, 100);
 }
 
 async function saveFact(){
   var base = parseFloat(g('mf-base').value)||0;
   if(!base){ toast('Introduce la base imponible'); return; }
-  var iva = Math.round(base*2100)/100/100;
+  var tipo = (g('mf-tipo') ? g('mf-tipo').value : 'factura') || 'factura';
+  var iva = tipo === 'albaran' ? 0 : Math.round(base*2100)/100/100;
+  var eid = g('mf-id').value;
+  var existente = eid ? SD.facturas.find(function(x){ return x.id===eid; }) : null;
   var obj = {
-    id: g('mf-id').value||uid(), mes:g('mf-mes').value,
-    fecha:g('mf-fecha').value, num:g('mf-num').value||('F'+SD.numNext),
+    id: eid||uid(), mes:g('mf-mes').value,
+    fecha:g('mf-fecha').value, num: tipo==='albaran' ? (g('mf-num').value||'') : (g('mf-num').value||generarNumFact(g('mf-fecha').value)),
     cliente:g('mf-cli').value, matricula:g('mf-mat').value,
     base:base, iva:iva, total:base+iva,
-    concepto:g('mf-conc').value, pago:g('mf-pago').value, estado:g('mf-est').value
+    tipo:tipo,
+    concepto:g('mf-conc').value, pago:g('mf-pago').value, estado:g('mf-est').value,
+    creadoPor: existente ? (existente.creadoPor||USER) : USER,
+    creadoEn:  existente ? (existente.creadoEn||nowStr()) : nowStr(),
+    editadoPor: eid ? USER : null,
+    editadoEn:  eid ? nowStr() : null
   };
-  var eid = g('mf-id').value;
   if(eid){ var i=SD.facturas.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.facturas[i]=obj; }
-  else { SD.facturas.push(obj); SD.numNext++; }
-  closeFact(); toast(eid?'Factura actualizada':'Factura guardada'); renderFacts();
+  else {
+    SD.facturas.push(obj);
+    // Actualizar numNext con el secuencial real
+    // Actualizar numNext al mayor secuencial usado + 1
+    var seqGuardado = obj.num ? parseInt(obj.num.slice(-3),10) : 0;
+    if(seqGuardado >= SD.numNext) SD.numNext = seqGuardado + 1;
+  }
+  logActividad(eid?'editar':'crear','factura', (obj.cliente||'-')+' '+eur(obj.total));
+  closeFact(); toast(eid?'Factura actualizada por '+USER:'Factura creada por '+USER); renderFacts();
   await cloudPut();
 }
 
 async function delFact(id){
   var f = SD.facturas.find(function(x){ return x.id===id; });
   if(!f||!confirm('Eliminar factura de '+(f.cliente||'este cliente')+'?')) return;
+  logActividad('eliminar','factura',(f.cliente||'-')+' '+eur(f.total));
   SD.facturas = SD.facturas.filter(function(x){ return x.id!==id; });
-  toast('Factura eliminada'); renderFacts(); await cloudPut();
+  toast('Eliminado por '+USER); renderFacts(); await cloudPut();
 }
 
 // ============================================================
@@ -1437,7 +2003,9 @@ function calcP(){
 
 function openProv(){
   g('mp-tit').textContent='Nueva Compra Proveedor';
-  g('mp-id').value=''; g('mp-fecha').value=new Date().toISOString().slice(0,10);
+  g('mp-id').value=''; var dw2=g('mp-dup-warn'); if(dw2){dw2.style.display='none';}
+  var sb2=g('mp-save-btn'); if(sb2){sb2.style.background='var(--blue)';sb2.textContent='Guardar';}
+  g('mp-fecha').value=new Date().toISOString().slice(0,10);
   g('mp-num').value=''; g('mp-prov').value='';
   g('mp-base').value=''; g('mp-iva').value=''; g('mp-tot').value='';
   g('mp-conc').value=''; g('mp-est').value='Pagado'; g('mp-mes').value=curPT;
@@ -1460,24 +2028,31 @@ async function saveProv(){
   var base = parseFloat(g('mp-base').value);
   if(isNaN(base)){ toast('Introduce la base imponible'); return; }
   var iva = Math.round(base*2100)/100/100;
+  var eidP = g('mp-id').value;
+  var existenteP = eidP ? SD.proveedores.find(function(x){ return x.id===eidP; }) : null;
   var obj = {
-    id:g('mp-id').value||uid(), mes:g('mp-mes').value,
+    id:eidP||uid(), mes:g('mp-mes').value,
     fecha:g('mp-fecha').value, num:g('mp-num').value,
     proveedor:g('mp-prov').value, base:base, iva:iva, total:base+iva,
-    concepto:g('mp-conc').value, estado:g('mp-est').value
+    concepto:g('mp-conc').value, estado:g('mp-est').value,
+    creadoPor: existenteP ? (existenteP.creadoPor||USER) : USER,
+    creadoEn:  existenteP ? (existenteP.creadoEn||nowStr()) : nowStr(),
+    editadoPor: eidP ? USER : null,
+    editadoEn:  eidP ? nowStr() : null
   };
-  var eid = g('mp-id').value;
-  if(eid){ var i=SD.proveedores.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.proveedores[i]=obj; }
+  if(eidP){ var i=SD.proveedores.findIndex(function(x){ return x.id===eidP; }); if(i>=0) SD.proveedores[i]=obj; }
   else { SD.proveedores.push(obj); }
-  closeProv(); toast(eid?'Proveedor actualizado':'Compra guardada'); renderProvs();
+  logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));
+  closeProv(); toast(eidP?'Actualizado por '+USER:'Guardado por '+USER); renderProvs();
   await cloudPut();
 }
 
 async function delProv(id){
   var p = SD.proveedores.find(function(x){ return x.id===id; });
   if(!p||!confirm('Eliminar factura de '+p.proveedor+'?')) return;
+  logActividad('eliminar','proveedor',(p.proveedor||'-')+' '+eur(p.total));
   SD.proveedores = SD.proveedores.filter(function(x){ return x.id!==id; });
-  toast('Eliminado'); renderProvs(); await cloudPut();
+  toast('Eliminado por '+USER); renderProvs(); await cloudPut();
 }
 
 // ============================================================
@@ -1502,17 +2077,21 @@ async function saveGF(){
   var imp = parseFloat(g('gf-imp').value)||0;
   var per = g('gf-per').value;
   var impM = per==='Bimestral'?imp/2:per==='Trimestral'?imp/3:per==='Anual'?imp/12:imp;
-  var obj = {id:g('gf-id').value||uid(), concepto:g('gf-conc').value, period:per, importe:imp, importe_mes:impM, notas:g('gf-nota').value};
+  var eidGF = g('gf-id').value;
+  var obj = {id:eidGF||uid(), concepto:g('gf-conc').value, period:per, importe:imp, importe_mes:impM, notas:g('gf-nota').value, editadoPor:USER, editadoEn:nowStr()};
   var eid = g('gf-id').value;
   if(eid){ var i=SD.gastosFijos.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.gastosFijos[i]=obj; }
   else { SD.gastosFijos.push(obj); }
-  closeGF(); toast(eid?'Actualizado':'Gasto fijo anadido'); renderGastos(); await cloudPut();
+  logActividad(eidGF?'editar':'crear','gasto_fijo',obj.concepto+' '+eur(obj.importe_mes)+'/mes');
+  closeGF(); toast((eidGF?'Actualizado':'Anadido')+' por '+USER); renderGastos(); await cloudPut();
 }
 
 async function delGF(id){
   if(!confirm('Eliminar este gasto fijo?')) return;
+  var gfDel = SD.gastosFijos.find(function(x){ return x.id===id; });
+  if(gfDel) logActividad('eliminar','gasto_fijo',gfDel.concepto);
   SD.gastosFijos = SD.gastosFijos.filter(function(x){ return x.id!==id; });
-  toast('Eliminado'); renderGastos(); await cloudPut();
+  toast('Eliminado por '+USER); renderGastos(); await cloudPut();
 }
 
 // ============================================================
@@ -1539,58 +2118,96 @@ function editGV(id){
 
 async function saveGV(){
   var imp = parseFloat(g('gv-imp').value)||0;
+  var eidGV = g('gv-id').value;
   var obj = {
-    id:g('gv-id').value||uid(), mes:g('gv-mes').value,
+    id:eidGV||uid(), mes:g('gv-mes').value,
     fecha:g('gv-fecha').value, num:g('gv-num').value,
     prov:g('gv-prov').value, concepto:g('gv-conc').value,
-    importe:imp, pago:g('gv-pago').value
+    importe:imp, pago:g('gv-pago').value,
+    editadoPor:USER, editadoEn:nowStr()
   };
-  var eid = g('gv-id').value;
-  if(eid){ var i=SD.gastosVariables.findIndex(function(x){ return x.id===eid; }); if(i>=0) SD.gastosVariables[i]=obj; }
+  if(eidGV){ var i=SD.gastosVariables.findIndex(function(x){ return x.id===eidGV; }); if(i>=0) SD.gastosVariables[i]=obj; }
   else { SD.gastosVariables.push(obj); }
-  closeGV(); toast(eid?'Actualizado':'Gasto anadido'); renderGastos(); await cloudPut();
+  logActividad(eidGV?'editar':'crear','gasto_variable',(obj.prov||'-')+' '+eur(obj.importe));
+  closeGV(); toast((eidGV?'Actualizado':'Anadido')+' por '+USER); renderGastos(); await cloudPut();
 }
 
 async function delGV(id){
   if(!confirm('Eliminar este gasto?')) return;
+  var gvDel = SD.gastosVariables.find(function(x){ return x.id===id; });
+  if(gvDel) logActividad('eliminar','gasto_variable',(gvDel.prov||'-')+' '+eur(gvDel.importe));
   SD.gastosVariables = SD.gastosVariables.filter(function(x){ return x.id!==id; });
-  toast('Eliminado'); renderGastos(); await cloudPut();
+  toast('Eliminado por '+USER); renderGastos(); await cloudPut();
 }
 
 // ============================================================
 // PRINT / VIEW
 // ============================================================
 function buildInvHTML(f){
+  var pr = SD.perfil||{};
+  var nomEmp = pr.nombre||'Ali Eduardo Rebolledo Lozada';
+  var nif = pr.nif||'56010757F';
+  var reg = pr.regimen||'Autonomo - Regimen General IVA';
+  var dir = pr.direccion||'Calle Sant Isidre 85, Gava (Barcelona)';
+  var iban = pr.iban||'ES41 2100 8758 9802 0012 8887';
+  var banco = pr.banco||'CaixaBank';
+  var titular = pr.titular_cuenta||'Ali Eduardo Rebolledo Lozada';
+  var email = pr.email||'';
+  var tel = pr.telefono||'';
+  var esAlb = f.tipo === 'albaran';
   return '<div class="inv">'+
     '<div class="inv-hdr">'+
-    '<div><div class="inv-logo">AUTO <span>H&amp;R</span></div>'+
-    '<div style="font-size:11px;color:#64748b;margin-top:2px">Calle Sant Isidre 85, Gava (Barcelona)</div></div>'+
-    '<div style="text-align:right">'+
-    '<div style="font-size:14px;font-weight:700;color:var(--blue)">FACTURA</div>'+
-    '<div style="font-size:12px;font-weight:600">'+(f.num||'S/N')+'</div>'+
-    '<div style="font-size:11px;color:#64748b">'+(f.fecha||'')+'</div></div></div>'+
-    '<div style="margin-bottom:10px">'+
-    '<div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:3px">CLIENTE</div>'+
-    '<div style="font-size:13px;font-weight:600">'+escH(f.cliente||'--')+'</div>'+
-    (f.matricula ? '<div style="font-size:12px;color:#64748b">Matricula: '+escH(f.matricula)+'</div>' : '')+
+      '<div>'+
+        '<div style="font-size:15px;font-weight:800;color:#0f172a">'+escH(nomEmp)+'</div>'+
+        '<div style="font-size:10px;color:#64748b;margin-top:1px">'+escH(reg)+'</div>'+
+        '<div style="font-size:10px;color:#64748b">NIF: '+escH(nif)+'</div>'+
+        '<div style="font-size:10px;color:#64748b">'+escH(dir)+'</div>'+
+        (tel?'<div style="font-size:10px;color:#64748b">Tel: '+escH(tel)+'</div>':'')+
+        (email?'<div style="font-size:10px;color:#64748b">'+escH(email)+'</div>':'')+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:16px;font-weight:700;color:'+(esAlb?'#7c3aed':'#2563eb')+'">'+( esAlb ? 'ALBARAN DE TRABAJO' : 'FACTURA' )+'</div>'+
+        (f.num ? '<div style="font-size:12px;font-weight:600">Num: '+f.num+'</div>' : (esAlb ? '<div style="font-size:11px;color:#7c3aed">Registro interno</div>' : '<div style="font-size:12px;font-weight:600">S/N</div>'))+
+        '<div style="font-size:11px;color:#64748b">Fecha: '+(f.fecha||'')+'</div>'+
+      '</div>'+
     '</div>'+
-    '<table class="inv-tbl"><thead><tr><th>Concepto</th><th style="text-align:right">Importe</th></tr></thead>'+
-    '<tbody><tr><td>'+escH(f.concepto||'Servicio de taller')+'</td><td style="text-align:right">'+eur(f.base)+'</td></tr></tbody></table>'+
-    '<div class="inv-tot"><div style="font-size:12px;text-align:right">'+
-    '<div>Base imponible: '+eur(f.base)+'</div>'+
-    '<div>IVA (21%): '+eur(f.iva)+'</div>'+
-    '<div style="font-size:15px;border-top:1px solid #0f172a;margin-top:5px;padding-top:5px">TOTAL: '+eur(f.total)+'</div>'+
-    '</div></div>'+
-    '<div style="margin-top:12px;font-size:11px;color:#64748b">'+
-    '<div>Forma de pago: '+escH(f.pago||'--')+'</div>'+
-    '<div>Estado: '+(f.estado==='Cobrado'?'Cobrado':'Pendiente')+'</div></div></div>';
+    '<div style="margin-bottom:10px">'+
+      '<div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:3px;text-transform:uppercase">Cliente</div>'+
+      '<div style="font-size:13px;font-weight:600">'+escH(f.cliente||'--')+'</div>'+
+      (f.matricula?'<div style="font-size:11px;color:#64748b">Vehiculo: '+escH(f.matricula)+'</div>':'')+
+    '</div>'+
+    '<table class="inv-tbl"><thead><tr><th>Concepto / Trabajo</th><th style="text-align:right">Importe</th></tr></thead>'+
+    '<tbody><tr>'+
+      '<td>'+escH(f.concepto||'Servicio de taller mecanico')+'</td>'+
+      '<td style="text-align:right">'+eur(f.base)+'</td>'+
+    '</tr></tbody></table>'+
+    '<div style="text-align:right;margin-top:8px;font-size:12px">'+
+      '<div>Base imponible: '+eur(f.base)+'</div>'+
+      (esAlb ? '' : '<div>IVA (21%): '+eur(f.iva)+'</div>')+
+      '<div style="font-size:16px;font-weight:800;border-top:2px solid #0f172a;margin-top:6px;padding-top:6px;color:#0f172a">TOTAL: '+eur(f.total)+'</div>'+
+    '</div>'+
+    '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0">'+
+      '<div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase">Datos de pago</div>'+
+      '<div style="font-size:11px;color:#334155"><b>'+escH(banco)+'</b> - '+escH(titular)+'</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#0f172a;font-family:monospace;letter-spacing:1px;margin-top:3px">'+escH(iban)+'</div>'+
+      '<div style="font-size:11px;color:#64748b;margin-top:6px">'+
+        'Forma de pago: '+escH(f.pago||'--')+
+        ' &nbsp;|&nbsp; Estado: <b>'+(f.estado==='Cobrado'?'COBRADO':'PENDIENTE DE COBRO')+'</b>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
 }
 
 function buildProvHTML(p){
+  var pr2 = SD.perfil||{};
+  var nomEmp2 = pr2.nombre||'Ali Eduardo Rebolledo Lozada';
+  var dir2 = pr2.direccion||'Calle Sant Isidre 85, Gava (Barcelona)';
   return '<div class="inv">'+
     '<div class="inv-hdr">'+
-    '<div><div class="inv-logo">AUTO <span>H&amp;R</span></div>'+
-    '<div style="font-size:11px;color:#64748b">Calle Sant Isidre 85, Gava (Barcelona)</div></div>'+
+    '<div>'+
+    '<div style="font-size:14px;font-weight:800">'+escH(nomEmp2)+'</div>'+
+    '<div style="font-size:10px;color:#64748b">'+escH(dir2)+'</div>'+
+    '</div>'+
     '<div style="text-align:right">'+
     '<div style="font-size:14px;font-weight:700;color:var(--orange)">COMPRA</div>'+
     '<div style="font-size:12px;font-weight:600">'+(p.num||'S/N')+'</div>'+
@@ -1640,6 +2257,88 @@ function doPrint(){
 // ============================================================
 // EXPORT
 // ============================================================
+
+// ============================================================
+// PERFIL FISCAL
+// ============================================================
+function loadPerfil(){
+  // Historial de actividad
+  var actEl = g('actividad-lista');
+  if(actEl){
+    var acts = SD.actividad||[];
+    if(!acts.length){
+      actEl.innerHTML = '<div style="font-size:12px;color:var(--t4);padding:10px">Sin actividad registrada</div>';
+    } else {
+      var iconos = {crear:'&#10133;',editar:'&#9999;',eliminar:'&#128465;'};
+      var colores = {crear:'var(--green)',editar:'var(--blue)',eliminar:'var(--red)'};
+      var tipos = {factura:'Factura',proveedor:'Proveedor',gasto_fijo:'Gasto Fijo',gasto_variable:'Gasto Variable',perfil:'Perfil'};
+      actEl.innerHTML = acts.map(function(a){
+        var ic = iconos[a.accion]||'&#8226;';
+        var col = colores[a.accion]||'var(--t3)';
+        var tip = tipos[a.tipo]||a.tipo;
+        return '<div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);align-items:flex-start">'+
+          '<span style="font-size:16px;flex-shrink:0">'+ic+'</span>'+
+          '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:600;color:'+col+'">'+tip+' - '+escH(a.accion)+'</div>'+
+          '<div style="font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(a.detalle||'-')+'</div>'+
+          '<div style="font-size:10px;color:var(--t4);margin-top:2px">'+
+          '<span style="background:#f1f5f9;border-radius:10px;padding:1px 7px;font-weight:600;color:var(--blue)">'+escH(a.usuario)+'</span>'+
+          ' &nbsp;'+escH(a.ts)+'</div>'+
+          '</div></div>';
+      }).join('');
+    }
+  }
+  var p = SD.perfil||{};
+  var set = function(id, val){ var el=g(id); if(el) el.value=val||''; };
+  set('prf-nombre', p.nombre);
+  set('prf-nif', p.nif);
+  set('prf-regimen', p.regimen);
+  set('prf-dir', p.direccion);
+  set('prf-email', p.email);
+  set('prf-tel', p.telefono);
+  set('prf-iban', p.iban);
+  set('prf-banco', p.banco);
+  set('prf-titular', p.titular_cuenta);
+}
+
+async function savePerfil(showToast){
+  var get = function(id){ var el=g(id); return el?el.value.trim():''; };
+  SD.perfil = SD.perfil||{};
+  SD.perfil.nombre = get('prf-nombre');
+  SD.perfil.nif = get('prf-nif');
+  SD.perfil.regimen = get('prf-regimen');
+  SD.perfil.direccion = get('prf-dir');
+  SD.perfil.email = get('prf-email');
+  SD.perfil.telefono = get('prf-tel');
+  SD.perfil.iban = get('prf-iban');
+  SD.perfil.banco = get('prf-banco');
+  SD.perfil.titular_cuenta = get('prf-titular');
+  logActividad('editar','perfil','Datos fiscales y bancarios');
+  if(showToast){ toast('Datos guardados por '+USER); await cloudPut(); }
+}
+
+async function testConexion(){
+  if(!BIN||!KEY){ toast('Introduce Bin ID y API Key primero'); return; }
+  toast('Probando conexion...');
+  try{
+    var r = await fetch(JBIN+BIN+'/latest',{
+      method:'GET',mode:'cors',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false','Content-Type':'application/json'}
+    });
+    if(r.status===200){ toast('Conexion OK - JSONBin responde correctamente'); }
+    else if(r.status===401||r.status===403){ toast('ERROR: API Key incorrecta ('+r.status+')'); }
+    else if(r.status===404){ toast('ERROR: Bin ID incorrecto (404)'); }
+    else { toast('ERROR: codigo '+r.status); }
+  }catch(e){
+    var m = e.message||'';
+    if(m.includes('Load failed')||m.includes('Failed to fetch')){
+      toast('ERROR red: JSONBin bloqueado. Prueba en Safari abriendo: api.jsonbin.io');
+    } else {
+      toast('ERROR: '+m);
+    }
+  }
+}
+
 function exportJSON(){
   var blob = new Blob([JSON.stringify(SD,null,2)],{type:'application/json'});
   var a = document.createElement('a');
@@ -1657,11 +2356,11 @@ loadCfg();
 </script>
 
 <script>
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claude')){
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('sw.js')
       .then(function(){ console.log('SW registrado'); })
-      .catch(function(e){ console.log('SW error', e); });
+      .catch(function(e){ console.log('SW error', e.message); });
   });
 }
 </script>
