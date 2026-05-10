@@ -715,7 +715,8 @@ async function cloudGet(){
     var r = await fetch(JBIN+BIN+'/latest',{
       method:'GET',
       mode:'cors',
-      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false','Content-Type':'application/json'}
+      credentials:'omit',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}
     });
     if(r.status===401||r.status===403){
       setSyncStatus('err');
@@ -785,6 +786,7 @@ async function cloudPut(){
     var r = await fetch(JBIN+BIN,{
       method:'PUT',
       mode:'cors',
+      credentials:'omit',
       headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
       body:JSON.stringify(Object.assign({},SD,{version:SD.version||12,user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString()}))
     });
@@ -865,16 +867,19 @@ function updateSyncLabel(){
 }
 
 function renderAll(){
-  var active = document.querySelector('.sec.on');
-  if(active){
-    var id = active.id.replace('sec-','');
-    if(id==='inicio') renderDash();
-    else if(id==='facturas') renderFacts();
-    else if(id==='proveedores') renderProvs();
-    else if(id==='gastos') renderGastos();
-    else if(id==='fiscal') renderFiscal();
-    else if(id==='tesoreria') renderTesoreria();
-  }
+  try{
+    var active = document.querySelector('.sec.on');
+    if(active){
+      var id = active.id.replace('sec-','');
+      if(id==='inicio') renderDash();
+      else if(id==='facturas') renderFacts();
+      else if(id==='proveedores') renderProvs();
+      else if(id==='gastos') renderGastos();
+      else if(id==='fiscal') renderFiscal();
+      else if(id==='tesoreria') renderTesoreria();
+      else if(id==='ajustes') loadPerfil();
+    }
+  }catch(err){ console.log('renderAll error:',err.message||String(err)); }
 }
 
 // ============================================================
@@ -2342,8 +2347,10 @@ async function testConexion(){
   toast('Probando conexion...');
   try{
     var r = await fetch(JBIN+BIN+'/latest',{
-      method:'GET',mode:'cors',
-      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false','Content-Type':'application/json'}
+      method:'GET',
+      mode:'cors',
+      credentials:'omit',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}
     });
     if(r.status===200){ toast('Conexion OK - JSONBin responde correctamente'); }
     else if(r.status===401||r.status===403){ toast('ERROR: API Key incorrecta ('+r.status+')'); }
