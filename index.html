@@ -612,12 +612,14 @@ async function cloudGet(){
       if(d.gastosVariables && d.gastosVariables.length > 0) SD.gastosVariables = d.gastosVariables;
       if(d.numNext) SD.numNext = d.numNext;
     } else {
-      // Servidor tiene datos viejos (v'+srvVer+') - subir datos locales correctos
+      // Servidor tiene datos viejos - subir datos locales y confirmar
       console.log('Servidor v'+srvVer+' desactualizado - subiendo datos v99...');
       await cloudPut();
+      toast('Datos actualizados en servidor');
     }
     lastSync = new Date();
     setSyncStatus('ok');
+    updateSyncLabel();
     renderAll();
   }catch(e){ setSyncStatus('err'); }
 }
@@ -675,6 +677,16 @@ function logout(){
   if(!confirm('Cerrar sesion?')) return;
   localStorage.removeItem('autohr_cfg');
   location.reload();
+}
+
+function updateSyncLabel(){
+  if(lastSync && g('adj-sync')){
+    var h=lastSync.getHours().toString().padStart(2,'0');
+    var mn=lastSync.getMinutes().toString().padStart(2,'0');
+    var dd=lastSync.getDate().toString().padStart(2,'0');
+    var mo=(lastSync.getMonth()+1).toString().padStart(2,'0');
+    g('adj-sync').textContent='Ultima sync: '+dd+'/'+mo+' '+h+':'+mn+' ('+USER+')';
+  }
 }
 
 function renderAll(){
