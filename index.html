@@ -319,6 +319,7 @@ textarea{resize:vertical;min-height:60px}
 
     <div class="lbl">Sincronizacion</div>
     <button class="btn" onclick="syncNow()">Sincronizar ahora</button>
+    <button class="btn br" style="background:#7c3aed;border-color:#7c3aed" onclick="forcePushLocal()">Forzar subida datos locales</button>
     <button class="btn bs" onclick="testConexion()">Verificar conexion JSONBin</button>
     <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
     <div class="lbl">Historial de actividad</div>
@@ -649,6 +650,7 @@ var SD = {
     {id:'gv14',mes:'Dic-25',fecha:'2025-12-01',num:'25-2641',prov:'Asemar',concepto:'Gestoria Diciembre 2025',importe:60.5,pago:'Transferencia'},
     {id:'gv15',mes:'Dic-25',fecha:'2025-12-01',num:'2100',prov:'Zaballos',concepto:'Asesoria Nov-Dic 2025',importe:153.23,pago:'Transferencia'}
   ],
+  version: 12,
   numNext: 57,
   actividad: [],
   perfil: {
@@ -729,30 +731,33 @@ async function cloudGet(){
     var d = await r.json();
     var needsPush = false;
     if(d && typeof d==='object'){
-      if(d.facturas && d.facturas.length>=SD.facturas.length){ SD.facturas=d.facturas; }
-      else { needsPush=true; }
-      if(d.proveedores && d.proveedores.length>=SD.proveedores.length){ SD.proveedores=d.proveedores; }
-      else { needsPush=true; }
-      if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos=d.gastosFijos;
-      if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables=d.gastosVariables;
-      // numNext del servidor: solo usar si es coherente con los numeros reales de factura
-      // Calcular el max secuencial de las facturas que se van a cargar
-      if(d.numNext){
-        var factsParaCalc = (d.facturas && d.facturas.length) ? d.facturas : SD.facturas;
-        var maxSeqServer = 56;
-        factsParaCalc.forEach(function(f){
-          if(f.num && f.num.length>=3){
-            var sq = parseInt(f.num.slice(-3),10);
-            if(!isNaN(sq) && sq>maxSeqServer) maxSeqServer=sq;
-          }
-        });
-        // El numNext correcto es el mayor entre el secuencial+1 y lo guardado en servidor
-        // pero NUNCA superior a maxSeqServer+1 si el servidor tiene un valor inflado
-        var numNextCorrecto = maxSeqServer + 1;
-        SD.numNext = Math.max(numNextCorrecto, 57); // minimo 57 siempre
+      var serverVer = d.version || 0;
+      var localVer  = SD.version || 12;
+      if(serverVer < localVer){
+        // Datos locales son mas recientes que el servidor - forzar subida
+        needsPush = true;
+        console.log('Datos locales v'+localVer+' > servidor v'+serverVer+' -> subiendo...');
+      } else {
+        // Servidor igual o mas nuevo - usar sus datos
+        if(d.facturas && d.facturas.length>=SD.facturas.length){ SD.facturas=d.facturas; }
+        else { needsPush=true; }
+        if(d.proveedores && d.proveedores.length>=SD.proveedores.length){ SD.proveedores=d.proveedores; }
+        else { needsPush=true; }
+        if(d.gastosFijos && d.gastosFijos.length) SD.gastosFijos=d.gastosFijos;
+        if(d.gastosVariables && d.gastosVariables.length) SD.gastosVariables=d.gastosVariables;
+        if(d.actividad) SD.actividad=d.actividad;
+        if(d.perfil) SD.perfil=Object.assign({},SD.perfil,d.perfil);
       }
-      if(d.perfil) SD.perfil=Object.assign({},SD.perfil,d.perfil);
-      if(d.actividad) SD.actividad=d.actividad;
+      // numNext: siempre calcular desde facturas reales
+      var factsRef = SD.facturas;
+      var maxSeqRef = 56;
+      factsRef.forEach(function(f){
+        if(f.num && f.num.length>=3){
+          var sq = parseInt(f.num.slice(-3),10);
+          if(!isNaN(sq) && sq > maxSeqRef) maxSeqRef = sq;
+        }
+      });
+      SD.numNext = Math.max(maxSeqRef + 1, 57);
     } else { needsPush=true; }
     lastSync=new Date();
     setSyncStatus('ok');
@@ -781,7 +786,7 @@ async function cloudPut(){
       method:'PUT',
       mode:'cors',
       headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify(Object.assign({},SD,{user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString()}))
+      body:JSON.stringify(Object.assign({},SD,{version:SD.version||12,user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString()}))
     });
     if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error guardando'; return; }
     lastSync=new Date();
@@ -795,6 +800,13 @@ async function cloudPut(){
 }
 
 async function syncNow(){ await cloudGet(); toast('Sincronizacion completada'); }
+
+async function forcePushLocal(){
+  if(!BIN||!KEY){ toast('Configura JSONBin primero'); return; }
+  SD.version = (SD.version||12);
+  await cloudPut();
+  toast('Datos locales subidos al servidor correctamente');
+}
 
 // ============================================================
 // SETUP & LOGIN
