@@ -150,6 +150,7 @@ textarea{resize:vertical;min-height:60px}
 .ac-item b{color:var(--blue)}
 .ac-item small{display:block;font-size:11px;color:var(--t3);margin-top:2px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -322,6 +323,7 @@ textarea{resize:vertical;min-height:60px}
     <button class="btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="forzarSubida()">Forzar subida datos locales</button>
     <button class="btn bs" onclick="testConexion()">Verificar conexion JSONBin</button>
     <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
+    <button class="btn bs" onclick="exportExcel()">Exportar Excel (.xlsx)</button>
     <div class="lbl">Historial de actividad</div>
     <div id="actividad-lista" style="max-height:280px;overflow-y:auto"></div>
     <div class="lbl">Sesion</div>
@@ -2357,6 +2359,125 @@ async function testConexion(){
       toast('ERROR: '+m);
     }
   }
+}
+
+
+// ============================================================
+// EXPORTAR EXCEL
+// ============================================================
+function exportExcel(){
+  if(typeof XLSX === 'undefined'){
+    toast('Cargando libreria Excel...');
+    setTimeout(exportExcel, 1500);
+    return;
+  }
+  toast('Generando Excel...');
+  var wb = XLSX.utils.book_new();
+
+  // ── Hoja 1: Facturas emitidas ──
+  var facRows = [['Mes','Fecha','N Factura','Tipo','Cliente','Matricula','Base EUR','IVA EUR','Total EUR','Concepto','Forma Pago','Estado','Creado por','Editado por']];
+  SD.facturas.forEach(function(f){
+    facRows.push([
+      f.mes||'', f.fecha||'', f.num||'', f.tipo==='albaran'?'Albaran':'Factura',
+      f.cliente||'', f.matricula||'',
+      Number(f.base)||0, Number(f.iva)||0, Number(f.total)||0,
+      f.concepto||'', f.pago||'', f.estado||'',
+      f.creadoPor||'', f.editadoPor||''
+    ]);
+  });
+  var wsFact = XLSX.utils.aoa_to_sheet(facRows);
+  wsFact['!cols'] = [{wch:8},{wch:12},{wch:14},{wch:10},{wch:28},{wch:12},{wch:12},{wch:10},{wch:12},{wch:40},{wch:14},{wch:10},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsFact, 'Facturas Emitidas');
+
+  // ── Hoja 2: Proveedores ──
+  var provRows = [['Mes','Fecha','N Factura','Proveedor','Base EUR','IVA EUR','Total EUR','Concepto','Estado','Vencimiento']];
+  var nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  SD.proveedores.forEach(function(p){
+    // Calcular vencimiento
+    var venc = '';
+    var prov = (p.proveedor||'').toLowerCase();
+    if(prov.indexOf('adbosch')>=0){
+      var partes = (p.mes||'').split('-');
+      if(partes.length===2){
+        var mi = nombres.indexOf(partes[0]);
+        if(mi>=0){
+          var d = new Date(2000+parseInt(partes[1],10), mi, 1);
+          d.setMonth(d.getMonth()+2);
+          venc = 'dia 10 de '+nombres[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2);
+        }
+      }
+    } else if(p.fecha){
+      var d2 = new Date(p.fecha);
+      if(!isNaN(d2.getTime())){
+        d2.setDate(d2.getDate()+30);
+        venc = d2.getDate()+'/'+(d2.getMonth()+1)+'/'+d2.getFullYear();
+      }
+    }
+    provRows.push([
+      p.mes||'', p.fecha||'', p.num||'', p.proveedor||'',
+      Number(p.base)||0, Number(p.iva)||0, Number(p.total)||0,
+      p.concepto||'', p.estado||'', venc
+    ]);
+  });
+  var wsProv = XLSX.utils.aoa_to_sheet(provRows);
+  wsProv['!cols'] = [{wch:8},{wch:12},{wch:14},{wch:10},{wch:12},{wch:10},{wch:12},{wch:35},{wch:10},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, wsProv, 'Proveedores');
+
+  // ── Hoja 3: Gastos Fijos ──
+  var gfRows = [['Concepto','Periodicidad','Importe Real EUR','Importe Mes EUR','Notas','Ultima edicion']];
+  SD.gastosFijos.forEach(function(g){
+    gfRows.push([g.concepto||'', g.period||'', Number(g.importe)||0, Number(g.importe_mes)||0, g.notas||'', g.editadoEn||'']);
+  });
+  // Total fila
+  gfRows.push(['TOTAL MENSUAL','','','=SUM(D2:D'+gfRows.length+')','','']);
+  var wsGF = XLSX.utils.aoa_to_sheet(gfRows);
+  wsGF['!cols'] = [{wch:25},{wch:14},{wch:16},{wch:16},{wch:30},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, wsGF, 'Gastos Fijos');
+
+  // ── Hoja 4: Gastos Variables ──
+  var gvRows = [['Mes','Fecha','N Factura','Proveedor/Organismo','Concepto','Importe EUR','Forma Pago','Editado por']];
+  SD.gastosVariables.forEach(function(g){
+    gvRows.push([g.mes||'', g.fecha||'', g.num||'', g.prov||'', g.concepto||'', Number(g.importe)||0, g.pago||'', g.editadoPor||'']);
+  });
+  var wsGV = XLSX.utils.aoa_to_sheet(gvRows);
+  wsGV['!cols'] = [{wch:8},{wch:12},{wch:12},{wch:22},{wch:30},{wch:12},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsGV, 'Gastos Variables');
+
+  // ── Hoja 5: Resumen por mes ──
+  var meses = ['Sep-25','Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26'];
+  var gfMes = SD.gastosFijos.reduce(function(a,g){ return a+Number(g.importe_mes||0); },0);
+  var resRows = [['Mes','Ingresos Base EUR','IVA Repercutido','Compras Proveedores','IVA Soportado','Gastos Variables','Gastos Fijos','Resultado Neto','IVA Neto (303)']];
+  meses.forEach(function(m){
+    var fM = SD.facturas.filter(function(f){ return f.mes===m&&f.estado==='Cobrado'; });
+    var pM = SD.proveedores.filter(function(p){ return p.mes===m; });
+    var gvM = SD.gastosVariables.filter(function(g){ return g.mes===m; });
+    var ing  = fM.reduce(function(a,f){ return a+Number(f.base||0); },0);
+    var ivaR = fM.reduce(function(a,f){ return a+Number(f.iva||0); },0);
+    var comp = pM.reduce(function(a,p){ return a+Number(p.base||0); },0);
+    var ivaS = pM.reduce(function(a,p){ return a+Number(p.iva||0); },0);
+    var gv   = gvM.reduce(function(a,g){ return a+Number(g.importe||0); },0);
+    var res  = ing - comp - gv - gfMes;
+    var ivaN = ivaR - ivaS;
+    resRows.push([m, ing, ivaR, comp, ivaS, gv, gfMes, res, ivaN]);
+  });
+  // Fila total
+  resRows.push(['TOTAL',
+    '=SUM(B2:B'+( resRows.length)+')',
+    '=SUM(C2:C'+( resRows.length)+')',
+    '=SUM(D2:D'+( resRows.length)+')',
+    '=SUM(E2:E'+( resRows.length)+')',
+    '=SUM(F2:F'+( resRows.length)+')',
+    '', '=SUM(H2:H'+(resRows.length)+')',
+    '=SUM(I2:I'+(resRows.length)+')'
+  ]);
+  var wsRes = XLSX.utils.aoa_to_sheet(resRows);
+  wsRes['!cols'] = [{wch:8},{wch:18},{wch:18},{wch:20},{wch:16},{wch:18},{wch:14},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen Mensual');
+
+  // ── Generar y descargar ──
+  var fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'AutoHR_'+fecha+'.xlsx');
+  toast('Excel descargado correctamente');
 }
 
 function exportJSON(){
