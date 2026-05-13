@@ -374,7 +374,7 @@ textarea{resize:vertical;min-height:60px}
       <div class="autocomplete-wrap">
         <input type="text" id="mf-cli" placeholder="Nombre o iniciales..." autocomplete="off"
           oninput="checkDupFact();acCliente(this.value)"
-          onfocus="acCliente(this.value)"
+          onfocus="acCliente(this.value||' ')"
           onblur="setTimeout(function(){acClose('ac-cli-list')},200)">
         <div class="autocomplete-list" id="ac-cli-list"></div>
       </div>
@@ -384,7 +384,7 @@ textarea{resize:vertical;min-height:60px}
       <div class="autocomplete-wrap">
         <input type="text" id="mf-mat" placeholder="1234ABC" autocomplete="off"
           oninput="acMatricula(this.value)"
-          onfocus="acMatricula(this.value)"
+          onfocus="acMatricula(this.value||' ')"
           onblur="setTimeout(function(){acClose('ac-mat-list')},200)">
         <div class="autocomplete-list" id="ac-mat-list"></div>
       </div>
@@ -1590,6 +1590,8 @@ function setTipoFact(tipo){
     if(numInput) numInput.placeholder = 'Auto';
     if(numHint) numHint.style.display = '';
     if(saveBtn) saveBtn.textContent = 'Guardar Factura';
+    // Recalcular IVA desde la base actual
+    calcF();
     // Generar numero automatico
     actualizarNumFact();
   } else {
@@ -1603,12 +1605,13 @@ function setTipoFact(tipo){
     info.style.color = '#7c3aed';
     info.textContent = 'Sin numero de factura. Solo registro interno del trabajo.';
     if(ivaWrap) ivaWrap.style.display = 'none';
-    if(baseLbl) baseLbl.textContent = 'Importe cobrado (total)';
-    if(numInput){ numInput.value = ''; numInput.placeholder = 'Sin numero (opcional ref.)'; }
+    if(baseLbl) baseLbl.textContent = 'Importe cobrado (total sin IVA)';
+    if(numInput){ if(!numInput.value) numInput.placeholder = 'Sin numero (opcional ref.)'; }
     if(numHint) numHint.style.display = 'none';
-    // Limpiar IVA
+    // Poner IVA a 0, mantener el importe base que ya tenia
     var ivaEl = g('mf-iva'); if(ivaEl) ivaEl.value = '0.00';
-    var totEl = g('mf-tot'); if(totEl) totEl.value = '';
+    var baseVal = parseFloat(g('mf-base') ? g('mf-base').value : 0)||0;
+    var totEl = g('mf-tot'); if(totEl && baseVal) totEl.value = baseVal.toFixed(2);
     if(saveBtn) saveBtn.textContent = 'Guardar Albaran';
   }
   checkDupFact();
@@ -1667,7 +1670,18 @@ function acCliente(val){
     return !q || c.cliente.toLowerCase().includes(q);
   }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,8);
 
-  if(!resultados.length || !q){
+  // Mostrar si hay texto (aunque sea el nombre completo al editar)
+  if(!resultados.length){
+    list.classList.remove('open');
+    return;
+  }
+  // Si no hay query, mostrar los 8 más recientes
+  if(!q){
+    resultados = Object.values(mapaClientes)
+      .sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); })
+      .slice(0,8);
+  }
+  if(!resultados.length){
     list.classList.remove('open');
     return;
   }
@@ -1715,6 +1729,12 @@ function acMatricula(val){
     return !q || m.matricula.toLowerCase().includes(q);
   }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,8);
 
+  // Si no hay query mostrar las mas recientes
+  if(!resultados.length && !q){
+    resultados = Object.values(mapaMat)
+      .sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); })
+      .slice(0,8);
+  }
   if(!resultados.length){
     list.classList.remove('open');
     return;
