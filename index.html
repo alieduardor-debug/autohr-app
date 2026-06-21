@@ -1103,6 +1103,9 @@ function setTipoFact(tipo){
 function actualizarNumFact(){
   var fechaEl=g('mf-fecha');var numEl=g('mf-num');var eid=g('mf-id').value;
   if(!numEl||eid)return;
+  var tipo=g('mf-tipo')?g('mf-tipo').value:'factura';
+  // Solo generar número automático para facturas, NO para albaranes
+  if(tipo==='albaran'){numEl.value='';numEl.placeholder='Sin numero (ref. interna)';return;}
   var sugerido=generarNumFact(fechaEl?fechaEl.value:null);
   numEl.value=sugerido;checkDupFact();
 }
@@ -1187,9 +1190,23 @@ async function saveFact(){
   var tipo=(g('mf-tipo')?g('mf-tipo').value:'factura')||'factura';
   var iva=tipo==='albaran'?0:Math.round(base*2100)/100/100;
   var eid=g('mf-id').value;var existente=eid?SD.facturas.find(function(x){return x.id===eid;}):null;
-  var obj={id:eid||uid(),mes:g('mf-mes').value,fecha:g('mf-fecha').value,num:tipo==='albaran'?(g('mf-num').value||''):(g('mf-num').value||generarNumFact(g('mf-fecha').value)),cliente:g('mf-cli').value,matricula:g('mf-mat').value,base:base,iva:iva,total:base+iva,tipo:tipo,concepto:g('mf-conc').value,pago:g('mf-pago').value,estado:g('mf-est').value,creadoPor:existente?(existente.creadoPor||USER):USER,creadoEn:existente?(existente.creadoEn||nowStr()):nowStr(),editadoPor:eid?USER:null,editadoEn:eid?nowStr():null};
+  // Para albarán: no asignar número de factura ni incrementar secuencia
+  var numFinal='';
+  if(tipo==='factura'){
+    numFinal=g('mf-num').value||generarNumFact(g('mf-fecha').value);
+  }else{
+    numFinal=g('mf-num').value||''; // albarán: número opcional, vacío por defecto
+  }
+  var obj={id:eid||uid(),mes:g('mf-mes').value,fecha:g('mf-fecha').value,num:numFinal,cliente:g('mf-cli').value,matricula:g('mf-mat').value,base:base,iva:iva,total:base+iva,tipo:tipo,concepto:g('mf-conc').value,pago:g('mf-pago').value,estado:g('mf-est').value,creadoPor:existente?(existente.creadoPor||USER):USER,creadoEn:existente?(existente.creadoEn||nowStr()):nowStr(),editadoPor:eid?USER:null,editadoEn:eid?nowStr():null};
   if(eid){var i=SD.facturas.findIndex(function(x){return x.id===eid;});if(i>=0)SD.facturas[i]=obj;}
-  else{SD.facturas.push(obj);var seqGuardado=obj.num?parseInt(obj.num.slice(-3),10):0;if(seqGuardado>=SD.numNext)SD.numNext=seqGuardado+1;}
+  else{
+    SD.facturas.push(obj);
+    // Solo incrementar numNext para facturas, NO para albaranes
+    if(tipo==='factura'){
+      var seqGuardado=numFinal?parseInt(numFinal.slice(-3),10):0;
+      if(seqGuardado>=SD.numNext)SD.numNext=seqGuardado+1;
+    }
+  }
   logActividad(eid?'editar':'crear','factura',(obj.cliente||'-')+' '+eur(obj.total));
   closeFact();toast(eid?'Factura actualizada por '+USER:'Factura creada por '+USER);renderFacts();
   var ok=await cloudPut();
