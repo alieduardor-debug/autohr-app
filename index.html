@@ -1201,33 +1201,42 @@ function setTipoFact(tipo){
     btnF.style.background='var(--blue)';btnF.style.borderColor='var(--blue)';btnF.style.color='#fff';
     btnA.style.background='var(--card)';btnA.style.borderColor='var(--border2)';btnA.style.color='var(--t2)';
     info.style.background='#eff6ff';info.style.color='var(--blue)';info.textContent='Con numero de factura y desglose de IVA';
-    if(ivaWrap)ivaWrap.style.display='';if(baseLbl)baseLbl.textContent='Base Imponible (sin IVA)';
-    if(numInput)numInput.placeholder='Auto';if(numHint)numHint.style.display='';
+    if(ivaWrap)ivaWrap.style.display='';
+    if(baseLbl)baseLbl.textContent='Base Imponible (sin IVA)';
+    if(numHint)numHint.style.display='';
     if(saveBtn)saveBtn.textContent='Guardar Factura';
-    calcF();actualizarNumFact();
+    // Generar número automático solo para facturas
+    var eid=g('mf-id').value;
+    if(!eid){
+      var fechaEl=g('mf-fecha');
+      if(numInput) numInput.value=generarNumFact(fechaEl?fechaEl.value:null);
+    }
+    calcF();
   }else{
     btnA.style.background='#7c3aed';btnA.style.borderColor='#7c3aed';btnA.style.color='#fff';
     btnF.style.background='var(--card)';btnF.style.borderColor='var(--border2)';btnF.style.color='var(--t2)';
     info.style.background='#faf5ff';info.style.color='#7c3aed';info.textContent='Sin numero de factura. Solo registro interno del trabajo.';
-    if(ivaWrap)ivaWrap.style.display='none';if(baseLbl)baseLbl.textContent='Importe cobrado (total sin IVA)';
-    if(numInput){if(!numInput.value)numInput.placeholder='Sin numero (opcional ref.)';}
+    if(ivaWrap)ivaWrap.style.display='none';
+    if(baseLbl)baseLbl.textContent='Importe cobrado (sin IVA)';
     if(numHint)numHint.style.display='none';
+    if(saveBtn)saveBtn.textContent='Guardar Albaran';
+    // Limpiar número — albarán no tiene número de factura
+    if(numInput){ numInput.value=''; numInput.placeholder='Sin numero (ref. interna opcional)'; }
     var ivaEl=g('mf-iva');if(ivaEl)ivaEl.value='0.00';
     var baseVal=parseFloat(g('mf-base')?g('mf-base').value:0)||0;
     var totEl=g('mf-tot');if(totEl&&baseVal)totEl.value=baseVal.toFixed(2);
-    if(saveBtn)saveBtn.textContent='Guardar Albaran';
   }
   checkDupFact();
 }
 
 function actualizarNumFact(){
   var fechaEl=g('mf-fecha');var numEl=g('mf-num');var eid=g('mf-id').value;
-  if(!numEl||eid)return;
+  if(!numEl||eid) return;
   var tipo=g('mf-tipo')?g('mf-tipo').value:'factura';
-  // Solo generar número automático para facturas, NO para albaranes
-  if(tipo==='albaran'){numEl.value='';numEl.placeholder='Sin numero (ref. interna)';return;}
-  var sugerido=generarNumFact(fechaEl?fechaEl.value:null);
-  numEl.value=sugerido;checkDupFact();
+  // Solo actuar en facturas — albaranes ya se gestionan en setTipoFact
+  if(tipo==='albaran') return;
+  numEl.value=generarNumFact(fechaEl?fechaEl.value:null);
+  checkDupFact();
 }
 
 // ============================================================
