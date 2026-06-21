@@ -278,6 +278,19 @@ textarea{resize:vertical;min-height:60px}
     <button class="btn bs" onclick="exportExcel()">Exportar Excel (.xlsx)</button>
     <div class="lbl">Historial de actividad</div>
     <div id="actividad-lista" style="max-height:280px;overflow-y:auto"></div>
+    <div class="lbl">Numeracion de facturas</div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.6">
+        Formato: <b>DDMMAA + NNN</b> (ej: 070426<b>057</b>)<br>
+        Modifica el siguiente numero secuencial si necesitas corregirlo.
+      </div>
+      <div class="fg">
+        <label class="fl">Proximo numero secuencial</label>
+        <input type="number" id="cfg-numNext" min="1" max="999" placeholder="57">
+      </div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px" id="cfg-numNext-preview"></div>
+      <button class="btn bp" onclick="guardarNumNext()">💾 Guardar secuencia</button>
+    </div>
     <div class="lbl">Sesion</div>
     <button class="btn br" onclick="logout()">Cerrar sesion</button>
     <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--t4)">Auto H&amp;R v11 - 2026</div>
@@ -1111,8 +1124,74 @@ function logActividad(accion,tipo,detalle){if(!SD.actividad)SD.actividad=[];SD.a
 // ============================================================
 // NUMERACION FACTURAS
 // ============================================================
-function getNextNumSeq(){var maxSeqFacts=56;SD.facturas.forEach(function(f){if(f.num&&f.num.length>=3){var seq=parseInt(f.num.slice(-3),10);if(!isNaN(seq)&&seq>maxSeqFacts)maxSeqFacts=seq;}});return Math.max(SD.numNext,maxSeqFacts+1);}
-function generarNumFact(fecha){var d=fecha?new Date(fecha):new Date();var dd=d.getDate().toString().padStart(2,'0');var mm=(d.getMonth()+1).toString().padStart(2,'0');var aa=d.getFullYear().toString().slice(-2);var seq=getNextNumSeq();var nnn=seq.toString().padStart(3,'0');return dd+mm+aa+nnn;}
+// ============================================================
+// GESTION SECUENCIA FACTURAS
+// ============================================================
+function getNextNumSeq(){
+  // Calcular el máximo secuencial usado en todas las facturas
+  var maxSeq=0;
+  SD.facturas.forEach(function(f){
+    if(f.tipo==='albaran') return; // albaranes no cuentan
+    if(f.num && f.num.length>=3){
+      var seq=parseInt(f.num.slice(-3),10);
+      if(!isNaN(seq) && seq>maxSeq) maxSeq=seq;
+    }
+  });
+  // numNext siempre debe ser mayor que el máximo ya usado
+  return Math.max(SD.numNext||57, maxSeq+1);
+}
+
+function generarNumFact(fecha){
+  var d=fecha?new Date(fecha):new Date();
+  var dd=d.getDate().toString().padStart(2,'0');
+  var mm=(d.getMonth()+1).toString().padStart(2,'0');
+  var aa=d.getFullYear().toString().slice(-2);
+  var seq=getNextNumSeq();
+  return dd+mm+aa+seq.toString().padStart(3,'0');
+}
+
+function cargarNumNextEnUI(){
+  var el=g('cfg-numNext');
+  if(el){
+    el.value=getNextNumSeq();
+    actualizarPreviewNum();
+  }
+}
+
+function actualizarPreviewNum(){
+  var el=g('cfg-numNext');var pr=g('cfg-numNext-preview');
+  if(!el||!pr) return;
+  var seq=parseInt(el.value)||1;
+  var hoy=new Date();
+  var dd=hoy.getDate().toString().padStart(2,'0');
+  var mm=(hoy.getMonth()+1).toString().padStart(2,'0');
+  var aa=hoy.getFullYear().toString().slice(-2);
+  pr.textContent='Próxima factura: '+dd+mm+aa+seq.toString().padStart(3,'0');
+}
+
+async function guardarNumNext(){
+  var el=g('cfg-numNext');
+  if(!el){toast('Error: campo no encontrado');return;}
+  var nuevo=parseInt(el.value)||0;
+  if(nuevo<1||nuevo>999){toast('El número debe estar entre 1 y 999');return;}
+  // Comprobar que no es menor que el máximo ya usado
+  var maxUsado=0;
+  SD.facturas.forEach(function(f){
+    if(f.tipo==='albaran') return;
+    if(f.num&&f.num.length>=3){var s=parseInt(f.num.slice(-3),10);if(!isNaN(s)&&s>maxUsado)maxUsado=s;}
+  });
+  if(nuevo<=maxUsado){
+    if(!confirm('⚠️ Ya existe la factura con secuencial '+maxUsado.toString().padStart(3,'0')+'.\nSi pones '+nuevo.toString().padStart(3,'0')+' se generarán duplicados.\n¿Continuar igualmente?')) return;
+  }
+  SD.numNext=nuevo;
+  var ok=await cloudPut();
+  if(ok){
+    toast('✅ Secuencia actualizada: próxima factura terminará en ...'+nuevo.toString().padStart(3,'0'));
+    actualizarPreviewNum();
+  } else {
+    toast('❌ Error al guardar. Inténtalo de nuevo.');
+  }
+}
 
 function setTipoFact(tipo){
   g('mf-tipo').value=tipo;
@@ -1244,11 +1323,11 @@ async function saveFact(){
     SD.facturas.push(obj);
     // Solo incrementar numNext para facturas, NO para albaranes
     if(tipo==='factura'){
-      var seqGuardado=numFinal?parseInt(numFinal.slice(-3),10):0;
-      if(seqGuardado>=SD.numNext)SD.numNext=seqGuardado+1;
+      var seqUsado=numFinal?parseInt(numFinal.slice(-3),10):0;
+      if(seqUsado>=SD.numNext) SD.numNext=seqUsado+1;
     }
   }
-  logActividad(eid?'editar':'crear','factura',(obj.cliente||'-')+' '+eur(obj.total));
+  logActividad(eid?'editar':'crear','factura',(obj.cliente||'-')+' '+eur(obj.total)+' | Num: '+(numFinal||'albaran'));
   closeFact();toast(eid?'Factura actualizada por '+USER:'Factura creada por '+USER);renderFacts();
   var ok=await cloudPut();
   if(!ok)showUnsaved();
@@ -1320,6 +1399,7 @@ function exportJSON(){var blob=new Blob([JSON.stringify(SD,null,2)],{type:'appli
 // PERFIL
 // ============================================================
 function loadPerfil(){
+  cargarNumNextEnUI(); // cargar secuencia actual
   var actEl=g('actividad-lista');
   if(actEl){var acts=SD.actividad||[];if(!acts.length){actEl.innerHTML='<div style="font-size:12px;color:var(--t4);padding:10px">Sin actividad registrada</div>';}else{var iconos={crear:'&#10133;',editar:'&#9999;',eliminar:'&#128465;'};var colores={crear:'var(--green)',editar:'var(--blue)',eliminar:'var(--red)'};var tipos={factura:'Factura',proveedor:'Proveedor',gasto_fijo:'Gasto Fijo',gasto_variable:'Gasto Variable',perfil:'Perfil'};actEl.innerHTML=acts.map(function(a){var ic=iconos[a.accion]||'&#8226;';var col=colores[a.accion]||'var(--t3)';var tip=tipos[a.tipo]||a.tipo;return'<div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);align-items:flex-start"><span style="font-size:16px;flex-shrink:0">'+ic+'</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:'+col+'">'+tip+' - '+escH(a.accion)+'</div><div style="font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(a.detalle||'-')+'</div><div style="font-size:10px;color:var(--t4);margin-top:2px"><span style="background:#f1f5f9;border-radius:10px;padding:1px 7px;font-weight:600;color:var(--blue)">'+escH(a.usuario)+'</span> &nbsp;'+escH(a.ts)+'</div></div></div>';}).join('');}}
   var p=SD.perfil||{};var set=function(id,val){var el=g(id);if(el)el.value=val||'';};
