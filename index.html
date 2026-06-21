@@ -151,6 +151,7 @@ textarea{resize:vertical;min-height:60px}
 .ac-item small{display:block;font-size:11px;color:var(--t3);margin-top:2px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -420,6 +421,13 @@ textarea{resize:vertical;min-height:60px}
   <div class="sheet">
     <div class="sh"></div>
     <div class="stit" id="mp-tit">Nueva Compra Proveedor</div>
+    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px">Cargar desde PDF</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Sube la factura del proveedor y relleno los datos automaticamente</div>
+      <input type="file" id="pdf-prov-input" accept=".pdf,application/pdf" style="display:none" onchange="leerPDFProveedor(this)">
+      <button class="btn bp bsm" style="width:100%" onclick="g('pdf-prov-input').click()">Seleccionar PDF de factura</button>
+      <div id="pdf-prov-status" style="font-size:11px;margin-top:6px;color:var(--t3)"></div>
+    </div>
     <div class="fg"><label class="fl">Mes</label><select id="mp-mes"></select></div>
     <div class="g2">
       <div class="fg"><label class="fl">Fecha</label><input type="date" id="mp-fecha"></div>
@@ -727,38 +735,37 @@ async function cloudGet(){
     }
     if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error '+r.status; return; }
     var d = await r.json();
-    // Verificar que los datos del servidor son correctos
-    // FAB26018740 debe tener mes Abr-26 (no Mar-26 como en datos viejos)
-    // FAB26022247 debe existir con total 639.28
-    var datosOK = false;
-    if(d && d.proveedores && d.proveedores.length > 0){
-      var p740  = d.proveedores.filter(function(p){ return p.num==='FAB26018740'; })[0];
-      var p247  = d.proveedores.filter(function(p){ return p.num==='FAB26022247'; })[0];
-      var pb48  = d.proveedores.filter(function(p){ return p.num==='1166989048';  })[0];
-      datosOK = p740 && p740.mes==='Abr-26' &&
-                p247 && Math.abs((p247.total||0)-639.28)<0.1 &&
-                pb48 && pb48.fecha==='2026-04-20';
-    }
-    if(d && typeof d==='object' && datosOK){
-      // Datos del servidor correctos - usarlos
-      if(d.facturas   && d.facturas.length   > 0) SD.facturas   = d.facturas;
-      if(d.proveedores&& d.proveedores.length > 0) SD.proveedores= d.proveedores;
-      if(d.gastosFijos&& d.gastosFijos.length > 0) SD.gastosFijos= d.gastosFijos;
-      if(d.gastosVariables&&d.gastosVariables.length>0) SD.gastosVariables=d.gastosVariables;
-      if(d.numNext){
-        var maxSq=56;
-        SD.facturas.forEach(function(f){
-          if(f.num&&f.num.length>=3){var sq=parseInt(f.num.slice(-3),10);if(!isNaN(sq)&&sq>maxSq)maxSq=sq;}
-        });
-        SD.numNext=Math.max(maxSq+1,57);
-      }
-      if(d.perfil)    SD.perfil    = Object.assign({},SD.perfil,d.perfil);
-      if(d.actividad) SD.actividad = d.actividad;
-    } else {
-      // Datos del servidor incorrectos o vacios - subir datos locales correctos
-      console.log('Datos servidor incorrectos - subiendo datos locales...');
+    // SYNC SEGURO: comparar timestamps para decidir quién gana
+    // Solo sobreescribimos el servidor si está vacío de verdad
+    var servidorVacio = !d || !d.facturas || d.facturas.length === 0;
+    var modalAbierto  = document.querySelector('.mbg.on') || document.querySelector('.pmwrap.on');
+
+    if(servidorVacio){
+      // Servidor vacío → subir datos locales (primera vez o bin limpio)
+      console.log('Servidor vacío - subiendo datos locales...');
       await cloudPut();
-      toast('Datos actualizados en servidor');
+      toast('Datos subidos al servidor');
+    } else if(modalAbierto){
+      // Hay un modal abierto (editando algo) → no tocar SD para no perder lo que hay en pantalla
+      console.log('Modal abierto - sync pospuesto');
+    } else {
+      // Servidor tiene datos → usarlos siempre (es la fuente de verdad compartida)
+      if(d.facturas        && d.facturas.length        > 0) SD.facturas        = d.facturas;
+      if(d.proveedores     && d.proveedores.length     > 0) SD.proveedores     = d.proveedores;
+      if(d.gastosFijos     && d.gastosFijos.length     > 0) SD.gastosFijos     = d.gastosFijos;
+      if(d.gastosVariables && d.gastosVariables.length > 0) SD.gastosVariables = d.gastosVariables;
+      if(d.numNext){
+        var maxSq = 56;
+        SD.facturas.forEach(function(f){
+          if(f.num && f.num.length >= 3){
+            var sq = parseInt(f.num.slice(-3), 10);
+            if(!isNaN(sq) && sq > maxSq) maxSq = sq;
+          }
+        });
+        SD.numNext = Math.max(d.numNext, maxSq + 1, 57);
+      }
+      if(d.perfil)    SD.perfil    = Object.assign({}, SD.perfil, d.perfil);
+      if(d.actividad) SD.actividad = d.actividad;
     }
     lastSync=new Date();
     setSyncStatus('ok');
@@ -786,7 +793,7 @@ async function cloudPut(){
       method:'PUT',
       mode:'cors',
       credentials:'omit',headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify(Object.assign({},SD,{user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString()}))
+      body:JSON.stringify(Object.assign({},SD,{user:USER,lastSyncUser:USER,lastSyncTime:new Date().toISOString(),_ts:Date.now()}))
     });
     if(!r.ok){ setSyncStatus('err'); g('slbl').textContent='Error guardando'; return; }
     lastSync=new Date();
@@ -2208,14 +2215,16 @@ function buildInvHTML(f){
       (esAlb ? '' : '<div>IVA (21%): '+eur(f.iva)+'</div>')+
       '<div style="font-size:16px;font-weight:800;border-top:2px solid #0f172a;margin-top:6px;padding-top:6px;color:#0f172a">TOTAL: '+eur(f.total)+'</div>'+
     '</div>'+
-    '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0">'+
+    '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1">'+
       '<div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase">Datos de pago</div>'+
       '<div style="font-size:11px;color:#334155"><b>'+escH(banco)+'</b> - '+escH(titular)+'</div>'+
       '<div style="font-size:13px;font-weight:700;color:#0f172a;font-family:monospace;letter-spacing:1px;margin-top:3px">'+escH(iban)+'</div>'+
       '<div style="font-size:11px;color:#64748b;margin-top:6px">'+
         'Forma de pago: '+escH(f.pago||'--')+
         ' &nbsp;|&nbsp; Estado: <b>'+(f.estado==='Cobrado'?'COBRADO':'PENDIENTE DE COBRO')+'</b>'+
-      '</div>'+
+      '</div></div>'+
+      '<div id="qr-box-'+f.id+'" style="margin-left:10px;flex-shrink:0"></div>'+
+    '</div>'+
     '</div>'+
   '</div>';
 }
@@ -2251,7 +2260,7 @@ function buildProvHTML(p){
     '<div style="margin-top:12px;font-size:11px;color:#64748b">Estado: '+(p.estado==='Pagado'?'Pagado':'Pendiente')+'</div></div>';
 }
 
-function viewFact(id){ var f=SD.facturas.find(function(x){return x.id===id;}); if(!f) return; g('pm-tit').textContent='Factura - '+f.cliente; g('pm-body').innerHTML=buildInvHTML(f); g('pmw').classList.add('on'); }
+function viewFact(id){ var f=SD.facturas.find(function(x){return x.id===id;}); if(!f) return; g('pm-tit').textContent='Factura - '+f.cliente; g('pm-body').innerHTML=buildInvHTML(f); g('pmw').classList.add('on'); setTimeout(function(){ generarQR(f); },200); }
 function printFact(id){ viewFact(id); }
 function viewProv(id){ var p=SD.proveedores.find(function(x){return x.id===id;}); if(!p) return; g('pm-tit').textContent='Compra - '+p.proveedor; g('pm-body').innerHTML=buildProvHTML(p); g('pmw').classList.add('on'); }
 function printProv(id){ viewProv(id); }
@@ -2361,6 +2370,83 @@ async function testConexion(){
   }
 }
 
+
+
+function leerPDFProveedor(input){
+  var file = input.files[0];
+  if(!file) return;
+  var status = g('pdf-prov-status');
+  status.textContent = 'Leyendo PDF...';
+  status.style.color = 'var(--blue)';
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var base64 = e.result.split(',')[1];
+    status.textContent = 'Analizando con IA...';
+    fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+            {type:'text',text:'Extrae de esta factura SOLO este JSON sin texto extra: {"proveedor":"","num_factura":"","fecha":"YYYY-MM-DD","base_imponible":0,"iva":0,"total":0,"concepto":""}'}
+          ]
+        }]
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var texto = (data.content&&data.content[0]) ? data.content[0].text : '';
+      var start = texto.indexOf('{');
+      var end = texto.lastIndexOf('}');
+      if(start<0||end<0) throw new Error('No JSON');
+      var info = JSON.parse(texto.slice(start, end+1));
+      if(info.proveedor)      { var el=g('mp-prov');  if(el) el.value=info.proveedor; }
+      if(info.num_factura)    { var el=g('mp-num');   if(el) el.value=info.num_factura; }
+      if(info.fecha)          { var el=g('mp-fecha'); if(el) el.value=info.fecha; }
+      if(info.base_imponible) { var el=g('mp-base');  if(el){ el.value=Number(info.base_imponible).toFixed(2); calcP(); } }
+      if(info.concepto)       { var el=g('mp-conc');  if(el) el.value=info.concepto; }
+      if(info.fecha){
+        var d=new Date(info.fecha);
+        var nm=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        var ms=nm[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2);
+        var sel=g('mp-mes');
+        if(sel){ for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===ms){sel.value=ms;break;} } }
+      }
+      status.textContent = 'Datos cargados. Revisa y confirma.';
+      status.style.color = 'var(--green)';
+      checkDupProv();
+    })
+    .catch(function(err){
+      status.textContent = 'Error al analizar PDF. Rellena manualmente.';
+      status.style.color = 'var(--red)';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function generarQR(f){
+  var qrEl = document.getElementById('qr-box-'+f.id);
+  if(!qrEl) return;
+  qrEl.innerHTML = '';
+  if(typeof QRCode === 'undefined') return;
+  var pr = SD.perfil||{};
+  var txt = 'FAC:' + (f.num||'SN') +
+            ' CLI:' + (f.cliente||'') +
+            ' F:' + (f.fecha||'') +
+            ' EUR:' + Number(f.total||0).toFixed(2) +
+            ' IBAN:' + (pr.iban||'');
+  try{
+    new QRCode(qrEl,{text:txt,width:80,height:80,colorDark:'#0f172a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:9px;color:#94a3b8;text-align:center;margin-top:2px';
+    lbl.textContent = 'Escanear';
+    qrEl.appendChild(lbl);
+  }catch(e){ console.log('QR error',e.message); }
+}
 
 // ============================================================
 // EXPORTAR EXCEL
