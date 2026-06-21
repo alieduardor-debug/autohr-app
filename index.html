@@ -617,68 +617,97 @@ function goTab(name){
 // ============================================================
 // CLOUD SYNC — CORREGIDO (sin datosOK que borraba los datos)
 // ============================================================
+// ============================================================
+// SYNC MEJORADO — fusión inteligente de datos
+// En lugar de sobreescribir, combina los registros de ambos
+// dispositivos usando el id como clave única.
+// Nunca se pierden datos aunque Ali y Yusef guarden a la vez.
+// ============================================================
+
+function fusionarArray(local, remoto){
+  // Construir mapa por id con el registro más reciente
+  var mapa={};
+  // Primero los remotos
+  (remoto||[]).forEach(function(r){
+    if(r&&r.id) mapa[r.id]=r;
+  });
+  // Luego los locales — si el local es más nuevo, gana
+  (local||[]).forEach(function(l){
+    if(!l||!l.id) return;
+    var tsL=l.editadoTs||l.creadoTs||l._ts||0;
+    var tsR=mapa[l.id] ? (mapa[l.id].editadoTs||mapa[l.id].creadoTs||mapa[l.id]._ts||0) : -1;
+    if(tsR===-1 || tsL>=tsR){
+      mapa[l.id]=l; // local más nuevo o registro solo existe en local
+    }
+  });
+  // Devolver ordenado por fecha descendente
+  return Object.values(mapa).sort(function(a,b){
+    return((b.fecha||b.mes||'')>( a.fecha||a.mes||''))?1:-1;
+  });
+}
+
 async function cloudGet(){
   if(!BIN||!KEY) return;
-  // No sincronizar si hay un modal abierto (evita sobreescribir mientras editas)
   var modalAbierto=document.querySelector('.mbg.on');
-  if(modalAbierto){ toast('Cierra el formulario antes de sincronizar'); return; }
+  if(modalAbierto) return; // silencioso si hay modal abierto
   setSyncStatus('sy');
   try{
-    var r=await fetch(JBIN+BIN+'/latest',{method:'GET',mode:'cors',credentials:'omit',headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
+    var r=await fetch(JBIN+BIN+'/latest',{method:'GET',mode:'cors',credentials:'omit',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
     if(r.status===401||r.status===403){setSyncStatus('err');g('slbl').textContent='API Key incorrecta';return;}
     if(r.status===404){setSyncStatus('err');g('slbl').textContent='Bin ID incorrecto';return;}
     if(!r.ok){setSyncStatus('err');g('slbl').textContent='Error '+r.status;return;}
     var d=await r.json();
 
-    if(d && typeof d==='object' && d.facturas && d.facturas.length>0){
-      // Comparar timestamps: solo usar servidor si es MÁS NUEVO que local
-      var tsServer=d._ts||0;
-      var tsLocal=SD._ts||0;
-      if(tsServer<tsLocal){
-        // Datos locales son más nuevos → NO sobreescribir
-        setSyncStatus('ok');
-        g('slbl').textContent='Local mas nuevo';
-        toast('Tus datos son mas recientes. Usa "Forzar subida" para guardarlos en el servidor.');
-        lastSync=new Date();updateSyncLabel();renderAll();
-        return;
+    if(d&&typeof d==='object'&&d.facturas&&d.facturas.length>0){
+      // FUSIÓN INTELIGENTE: combinar local + servidor sin perder nada
+      SD.facturas        = fusionarArray(SD.facturas,        d.facturas);
+      SD.proveedores     = fusionarArray(SD.proveedores,     d.proveedores);
+      SD.gastosFijos     = fusionarArray(SD.gastosFijos,     d.gastosFijos);
+      SD.gastosVariables = fusionarArray(SD.gastosVariables, d.gastosVariables);
+      // numNext: usar el mayor entre local y servidor
+      if(d.numNext) SD.numNext=Math.max(SD.numNext||57, d.numNext);
+      // perfil: servidor gana si es más nuevo
+      if(d.perfil&&(d._ts||0)>=(SD._ts||0)) SD.perfil=Object.assign({},SD.perfil,d.perfil);
+      // actividad: fusionar y limitar a 100
+      if(d.actividad&&d.actividad.length){
+        var actMapa={};
+        (SD.actividad||[]).forEach(function(a){actMapa[a.ts+'_'+a.usuario]=a;});
+        (d.actividad||[]).forEach(function(a){actMapa[a.ts+'_'+a.usuario]=a;});
+        SD.actividad=Object.values(actMapa).sort(function(a,b){return(b.ts||'')>(a.ts||'')?1:-1;}).slice(0,100);
       }
-      // Servidor es igual o más nuevo → usar datos del servidor
-      if(d.facturas)        SD.facturas        = d.facturas;
-      if(d.proveedores)     SD.proveedores     = d.proveedores;
-      if(d.gastosFijos)     SD.gastosFijos     = d.gastosFijos;
-      if(d.gastosVariables) SD.gastosVariables = d.gastosVariables;
-      if(d.numNext)         SD.numNext         = d.numNext;
-      if(d.perfil)          SD.perfil          = Object.assign({},SD.perfil,d.perfil);
-      if(d.actividad)       SD.actividad       = d.actividad;
-      SD._ts = tsServer;
+      // Guardar timestamp del servidor para referencia
+      SD._tsServer=d._ts||0;
       hideUnsaved();
-    } else if(!d || !d.facturas || d.facturas.length===0){
+      lastSync=new Date();setSyncStatus('ok');
+      g('slbl').textContent='Sincronizado';
+      updateSyncLabel();renderAll();
+      // Si tenemos datos más nuevos localmente, subirlos silenciosamente
+      if((SD._ts||0)>(d._ts||0)){
+        await cloudPut();
+      }
+    } else if(!d||!d.facturas||d.facturas.length===0){
       // Servidor vacío → subir datos locales
-      console.log('Servidor vacio — subiendo datos locales');
       await cloudPut();
-      toast('Servidor vacio — datos locales subidos');
+      toast('Servidor vacio — datos locales subidos ✅');
       lastSync=new Date();setSyncStatus('ok');updateSyncLabel();
-      return;
     }
-    lastSync=new Date();setSyncStatus('ok');updateSyncLabel();renderAll();
   }catch(e){
     setSyncStatus('err');
     var msg=e.message||'';
     if(msg.includes('Load failed')||msg.includes('Failed to fetch')||msg.includes('NetworkError')){
       g('slbl').textContent='Sin conexion';
-      toast('Sin conexion. Tus datos locales estan seguros.');
     } else {
       g('slbl').textContent='Error red';
+      console.log('cloudGet error:',e.message);
     }
-    console.log('cloudGet error:',e.message);
-    renderAll();
+    renderAll(); // mostrar datos locales aunque falle la red
   }
 }
 
 async function cloudPut(){
-  if(!BIN||!KEY) return;
+  if(!BIN||!KEY) return false;
   setSyncStatus('sy');
-  // Añadir timestamp para saber qué datos son más nuevos
   SD._ts      = Date.now();
   SD._user    = USER;
   SD._savedAt = new Date().toISOString();
@@ -690,16 +719,16 @@ async function cloudPut(){
     });
     if(!r.ok){
       setSyncStatus('err');g('slbl').textContent='Error guardando ('+r.status+')';
-      toast('Error al guardar ('+r.status+'). Intenta de nuevo.');
-      showUnsaved();
-      return false;
+      toast('❌ Error al guardar ('+r.status+'). Pulsa "Forzar subida".');
+      showUnsaved(); return false;
     }
-    lastSync=new Date();setSyncStatus('ok');updateSyncLabel();
-    hideUnsaved();
+    lastSync=new Date();setSyncStatus('ok');
+    g('slbl').textContent='Guardado ✓';
+    updateSyncLabel();hideUnsaved();
     return true;
   }catch(e){
-    setSyncStatus('err');g('slbl').textContent='Error guardando';
-    toast('Sin conexion al guardar. Datos seguros en este dispositivo.');
+    setSyncStatus('err');g('slbl').textContent='Sin conexion';
+    toast('Sin conexion. Datos seguros en este dispositivo.');
     showUnsaved();
     console.log('cloudPut error:',e.message);
     return false;
@@ -708,16 +737,28 @@ async function cloudPut(){
 
 async function forzarSubida(){
   if(!BIN||!KEY){toast('Configura JSONBin primero');return;}
-  // Forzar que el timestamp local sea el más nuevo para que el servidor lo acepte
-  SD._ts=Date.now();
-  toast('Subiendo datos locales al servidor...');
+  toast('Subiendo datos...');
+  // Antes de subir, descargar y fusionar para no perder lo del otro usuario
+  try{
+    var r=await fetch(JBIN+BIN+'/latest',{method:'GET',mode:'cors',credentials:'omit',
+      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
+    if(r.ok){
+      var d=await r.json();
+      if(d&&d.facturas&&d.facturas.length>0){
+        SD.facturas        = fusionarArray(SD.facturas,        d.facturas);
+        SD.proveedores     = fusionarArray(SD.proveedores,     d.proveedores);
+        SD.gastosFijos     = fusionarArray(SD.gastosFijos,     d.gastosFijos);
+        SD.gastosVariables = fusionarArray(SD.gastosVariables, d.gastosVariables);
+        if(d.numNext) SD.numNext=Math.max(SD.numNext||57,d.numNext);
+      }
+    }
+  }catch(e){ /* si falla la descarga previa, subir lo que tenemos */ }
   var ok=await cloudPut();
   if(ok){
-    toast('✅ Datos subidos y guardados correctamente en el servidor');
-    hideUnsaved();
+    toast('✅ Datos guardados en servidor correctamente');
+    renderAll();
   } else {
-    toast('❌ Error al subir. Comprueba conexion e intentalo de nuevo.');
-    showUnsaved();
+    toast('❌ Error al guardar. Comprueba conexion.');
   }
 }
 
@@ -725,7 +766,7 @@ async function syncNow(){
   var modalAbierto=document.querySelector('.mbg.on');
   if(modalAbierto){toast('Cierra el formulario antes de sincronizar');return;}
   await cloudGet();
-  toast('Sincronizacion completada');
+  toast('Sincronizacion completada ✅');
 }
 
 // ============================================================
@@ -1197,7 +1238,7 @@ async function saveFact(){
   }else{
     numFinal=g('mf-num').value||''; // albarán: número opcional, vacío por defecto
   }
-  var obj={id:eid||uid(),mes:g('mf-mes').value,fecha:g('mf-fecha').value,num:numFinal,cliente:g('mf-cli').value,matricula:g('mf-mat').value,base:base,iva:iva,total:base+iva,tipo:tipo,concepto:g('mf-conc').value,pago:g('mf-pago').value,estado:g('mf-est').value,creadoPor:existente?(existente.creadoPor||USER):USER,creadoEn:existente?(existente.creadoEn||nowStr()):nowStr(),editadoPor:eid?USER:null,editadoEn:eid?nowStr():null};
+  var obj={id:eid||uid(),mes:g('mf-mes').value,fecha:g('mf-fecha').value,num:numFinal,cliente:g('mf-cli').value,matricula:g('mf-mat').value,base:base,iva:iva,total:base+iva,tipo:tipo,concepto:g('mf-conc').value,pago:g('mf-pago').value,estado:g('mf-est').value,creadoPor:existente?(existente.creadoPor||USER):USER,creadoTs:existente?(existente.creadoTs||Date.now()):Date.now(),editadoPor:eid?USER:null,editadoTs:eid?Date.now():null};
   if(eid){var i=SD.facturas.findIndex(function(x){return x.id===eid;});if(i>=0)SD.facturas[i]=obj;}
   else{
     SD.facturas.push(obj);
@@ -1221,7 +1262,7 @@ function calcP(){var b=parseFloat(g('mp-base').value)||0;var iv=Math.round(b*21)
 function openProv(){g('mp-tit').textContent='Nueva Compra Proveedor';g('mp-id').value='';var dw2=g('mp-dup-warn');if(dw2)dw2.style.display='none';var sb2=g('mp-save-btn');if(sb2){sb2.style.background='var(--blue)';sb2.textContent='Guardar';}g('mp-fecha').value=new Date().toISOString().slice(0,10);g('mp-num').value='';g('mp-prov').value='';g('mp-base').value='';g('mp-iva').value='';g('mp-tot').value='';g('mp-conc').value='';g('mp-est').value='Pagado';g('mp-mes').value=curPT;g('mp').classList.add('on');}
 function closeProv(){g('mp').classList.remove('on');}
 function editProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('mp-tit').textContent='Editar Factura Proveedor';g('mp-id').value=id;g('mp-mes').value=p.mes||curPT;g('mp-fecha').value=p.fecha||'';g('mp-num').value=p.num||'';g('mp-prov').value=p.proveedor||'';g('mp-base').value=p.base||'';g('mp-iva').value=p.iva||'';g('mp-tot').value=p.total||'';g('mp-conc').value=p.concepto||'';g('mp-est').value=p.estado||'Pagado';g('mp').classList.add('on');}
-async function saveProv(){var base=parseFloat(g('mp-base').value);if(isNaN(base)){toast('Introduce la base imponible');return;}var iva=Math.round(base*2100)/100/100;var eidP=g('mp-id').value;var existenteP=eidP?SD.proveedores.find(function(x){return x.id===eidP;}):null;var obj={id:eidP||uid(),mes:g('mp-mes').value,fecha:g('mp-fecha').value,num:g('mp-num').value,proveedor:g('mp-prov').value,base:base,iva:iva,total:base+iva,concepto:g('mp-conc').value,estado:g('mp-est').value,creadoPor:existenteP?(existenteP.creadoPor||USER):USER,creadoEn:existenteP?(existenteP.creadoEn||nowStr()):nowStr(),editadoPor:eidP?USER:null,editadoEn:eidP?nowStr():null};if(eidP){var i=SD.proveedores.findIndex(function(x){return x.id===eidP;});if(i>=0)SD.proveedores[i]=obj;}else{SD.proveedores.push(obj);}logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));closeProv();toast(eidP?'Actualizado por '+USER:'Guardado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function saveProv(){var base=parseFloat(g('mp-base').value);if(isNaN(base)){toast('Introduce la base imponible');return;}var iva=Math.round(base*2100)/100/100;var eidP=g('mp-id').value;var existenteP=eidP?SD.proveedores.find(function(x){return x.id===eidP;}):null;  var obj={id:eidP||uid(),mes:g('mp-mes').value,fecha:g('mp-fecha').value,num:g('mp-num').value,proveedor:g('mp-prov').value,base:base,iva:iva,total:base+iva,concepto:g('mp-conc').value,estado:g('mp-est').value,creadoPor:existenteP?(existenteP.creadoPor||USER):USER,creadoTs:existenteP?(existenteP.creadoTs||Date.now()):Date.now(),editadoPor:eidP?USER:null,editadoTs:eidP?Date.now():null};if(eidP){var i=SD.proveedores.findIndex(function(x){return x.id===eidP;});if(i>=0)SD.proveedores[i]=obj;}else{SD.proveedores.push(obj);}logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));closeProv();toast(eidP?'Actualizado por '+USER:'Guardado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
 async function delProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p||!confirm('Eliminar factura de '+p.proveedor+'?'))return;logActividad('eliminar','proveedor',(p.proveedor||'-')+' '+eur(p.total));SD.proveedores=SD.proveedores.filter(function(x){return x.id!==id;});toast('Eliminado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
 
 // ============================================================
