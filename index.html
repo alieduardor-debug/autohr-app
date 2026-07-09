@@ -104,7 +104,39 @@ textarea{resize:vertical;min-height:60px}
 .inv-tbl td{padding:5px 8px;border-bottom:1px solid #f1f5f9}
 .inv-tot{margin-top:10px;border-top:2px solid var(--t1);padding-top:8px;display:flex;justify-content:flex-end}
 @media print{.no-print{display:none!important}}
-.autocomplete-wrap{position:relative}
+/* Tabs de meses fijas al hacer scroll */
+.sticky-tabs-wrap{
+  position:sticky;
+  top:0;
+  z-index:40;
+  background:var(--bg);
+  padding:8px 0 6px;
+  margin:-12px -14px 10px;
+  padding-left:14px;
+  padding-right:14px;
+  border-bottom:1px solid var(--border);
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+.mes-activo-badge{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:5px 10px 8px;
+}
+.mes-activo-txt{
+  font-size:12px;
+  font-weight:700;
+  color:var(--blue);
+  background:#eff6ff;
+  border:1.5px solid #bfdbfe;
+  border-radius:20px;
+  padding:3px 12px;
+  white-space:nowrap;
+}
+.mes-activo-count{
+  font-size:11px;
+  color:var(--t3);
+}
 .autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1.5px solid var(--blue);border-radius:0 0 10px 10px;z-index:300;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none}
 .autocomplete-list.open{display:block}
 .ac-item{padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px}
@@ -181,20 +213,34 @@ textarea{resize:vertical;min-height:60px}
   </div>
 
   <div class="sec" id="sec-facturas">
-    <div class="tabs" id="ft"></div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div class="srch"><span class="srch-ico">&#128269;</span><input type="text" id="fsrch" placeholder="Buscar cliente, matricula..." oninput="renderFacts()"></div>
-      <button class="btn bp bsm" onclick="openFact()">+ Nueva</button>
+    <div class="sticky-tabs-wrap">
+      <div class="mes-activo-badge">
+        <span style="font-size:16px">📅</span>
+        <span class="mes-activo-txt" id="f-mes-badge">—</span>
+        <span class="mes-activo-count" id="f-mes-count"></span>
+      </div>
+      <div class="tabs" id="ft"></div>
+      <div style="display:flex;gap:8px;padding-top:6px">
+        <div class="srch" style="flex:1"><span class="srch-ico">&#128269;</span><input type="text" id="fsrch" placeholder="Buscar cliente, matricula..." oninput="renderFacts()"></div>
+        <button class="btn bp bsm" onclick="openFact()">+ Nueva</button>
+      </div>
     </div>
     <div id="f-sum"></div>
     <div id="f-list"></div>
   </div>
 
   <div class="sec" id="sec-proveedores">
-    <div class="tabs" id="pt"></div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div class="srch"><span class="srch-ico">&#128269;</span><input type="text" id="psrch" placeholder="Buscar proveedor, factura..." oninput="renderProvs()"></div>
-      <button class="btn bp bsm" onclick="openProv()">+ Nueva</button>
+    <div class="sticky-tabs-wrap">
+      <div class="mes-activo-badge">
+        <span style="font-size:16px">📅</span>
+        <span class="mes-activo-txt" id="p-mes-badge">—</span>
+        <span class="mes-activo-count" id="p-mes-count"></span>
+      </div>
+      <div class="tabs" id="pt"></div>
+      <div style="display:flex;gap:8px;padding-top:6px">
+        <div class="srch" style="flex:1"><span class="srch-ico">&#128269;</span><input type="text" id="psrch" placeholder="Buscar proveedor, factura..." oninput="renderProvs()"></div>
+        <button class="btn bp bsm" onclick="openProv()">+ Nueva</button>
+      </div>
     </div>
     <div id="p-sum"></div>
     <div id="p-list"></div>
@@ -917,7 +963,23 @@ function renderDash(){
 function renderFacts(){
   var srch=(g('fsrch').value||'').toLowerCase();
   var modoGlobal=srch.length>0;
-  var list=modoGlobal?SD.facturas.filter(function(f){return(f.cliente||'').toLowerCase().includes(srch)||(f.matricula||'').toLowerCase().includes(srch)||(f.num||'').toLowerCase().includes(srch)||(f.concepto||'').toLowerCase().includes(srch);}):SD.facturas.filter(function(f){return f.mes===curFT;});
+  var list=modoGlobal
+    ?SD.facturas.filter(function(f){return(f.cliente||'').toLowerCase().includes(srch)||(f.matricula||'').toLowerCase().includes(srch)||(f.num||'').toLowerCase().includes(srch)||(f.concepto||'').toLowerCase().includes(srch);})
+    :SD.facturas.filter(function(f){return f.mes===curFT;});
+
+  // Actualizar badge mes activo
+  var badge=g('f-mes-badge');var count=g('f-mes-count');
+  if(badge){
+    if(modoGlobal){
+      badge.textContent='Búsqueda global';
+      badge.style.background='#ede9fe';badge.style.borderColor='#ddd6fe';badge.style.color='var(--purple)';
+    }else{
+      badge.textContent=ML[curFT]||curFT;
+      badge.style.background='#eff6ff';badge.style.borderColor='#bfdbfe';badge.style.color='var(--blue)';
+    }
+  }
+  if(count) count.textContent=list.length+' factura'+(list.length!==1?'s':'');
+
   var tot=list.reduce(function(a,f){return a+Number(f.base||0);},0);
   var cob=list.filter(function(f){return f.estado==='Cobrado';}).reduce(function(a,f){return a+Number(f.base||0);},0);
   var pen=list.filter(function(f){return f.estado==='Pendiente';}).reduce(function(a,f){return a+Number(f.base||0);},0);
@@ -943,7 +1005,23 @@ function renderFacts(){
 function renderProvs(){
   var srch=(g('psrch').value||'').toLowerCase();
   var modoGlobalP=srch.length>0;
-  var list=modoGlobalP?SD.proveedores.filter(function(p){return(p.proveedor||'').toLowerCase().includes(srch)||(p.num||'').toLowerCase().includes(srch)||(p.concepto||'').toLowerCase().includes(srch);}):SD.proveedores.filter(function(p){return p.mes===curPT;});
+  var list=modoGlobalP
+    ?SD.proveedores.filter(function(p){return(p.proveedor||'').toLowerCase().includes(srch)||(p.num||'').toLowerCase().includes(srch)||(p.concepto||'').toLowerCase().includes(srch);})
+    :SD.proveedores.filter(function(p){return p.mes===curPT;});
+
+  // Actualizar badge mes activo
+  var badge=g('p-mes-badge');var count=g('p-mes-count');
+  if(badge){
+    if(modoGlobalP){
+      badge.textContent='Búsqueda global';
+      badge.style.background='#ede9fe';badge.style.borderColor='#ddd6fe';badge.style.color='var(--purple)';
+    }else{
+      badge.textContent=ML[curPT]||curPT;
+      badge.style.background='#eff6ff';badge.style.borderColor='#bfdbfe';badge.style.color='var(--blue)';
+    }
+  }
+  if(count) count.textContent=list.length+' compra'+(list.length!==1?'s':'');
+
   var tot=list.reduce(function(a,p){return a+Number(p.base||0);},0);
   var pag=list.filter(function(p){return p.estado==='Pagado';}).reduce(function(a,p){return a+Number(p.base||0);},0);
   var pen=list.filter(function(p){return p.estado==='Pendiente';}).reduce(function(a,p){return a+Number(p.base||0);},0);
