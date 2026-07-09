@@ -430,13 +430,16 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- MODAL PRINT/VIEW -->
-<div class="pmwrap" id="pmw">
-  <div class="pmbox">
-    <div class="stit no-print" id="pm-tit">Vista Previa</div>
+<div class="pmwrap" id="pmw" onclick="closePMOutside(event)">
+  <div class="pmbox" id="pmbox">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px" class="no-print">
+      <div class="stit" id="pm-tit" style="margin:0">Vista Previa</div>
+      <button onclick="closePM()" style="background:var(--bg);border:1.5px solid var(--border2);border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;color:var(--t2)">✕</button>
+    </div>
     <div id="pm-body"></div>
     <div style="display:flex;gap:8px;margin-top:14px" class="no-print">
       <button class="btn bs" style="flex:1" onclick="doPrint()">Imprimir / PDF</button>
-      <button class="btn" style="flex:1" onclick="closePM()">Cerrar</button>
+      <button class="btn" style="flex:1" onclick="closePM()">← Volver</button>
     </div>
   </div>
 </div>
@@ -1383,7 +1386,21 @@ function viewFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(
 function printFact(id){viewFact(id);}
 function viewProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('pm-tit').textContent='Compra - '+p.proveedor;g('pm-body').innerHTML=buildProvHTML(p);g('pmw').classList.add('on');}
 function printProv(id){viewProv(id);}
-function closePM(){g('pmw').classList.remove('on');}
+function closePM(){
+  var pmw=g('pmw');
+  if(pmw){
+    pmw.classList.remove('on');
+    // Forzar repintado en iOS Safari PWA
+    pmw.style.display='none';
+    setTimeout(function(){pmw.style.display='';},10);
+  }
+  // Limpiar contenido para liberar memoria
+  var body=g('pm-body');if(body)body.innerHTML='';
+}
+function closePMOutside(e){
+  // Cerrar al pulsar fuera del contenido (en el fondo oscuro)
+  if(e.target===g('pmw')) closePM();
+}
 function doPrint(){var content=g('pm-body').innerHTML;var w=window.open('','_blank','width=600,height=800');var css=['body{font-family:Arial,sans-serif;padding:20px;max-width:580px;margin:0 auto}','.inv{border:1px solid #e2e8f0;border-radius:8px;padding:20px}','.inv-hdr{display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #0f172a}','.inv-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}','.inv-tbl th{background:#f8fafc;padding:7px 9px;text-align:left;font-weight:600;border-bottom:1px solid #e2e8f0}','.inv-tbl td{padding:6px 9px;border-bottom:1px solid #f1f5f9}','.inv-tot{margin-top:10px;border-top:2px solid #0f172a;padding-top:8px;display:flex;justify-content:flex-end}'].join('');var doc='<html><head><title>Auto HR</title><style>'+css+'</style></head><body>'+content+'</body></html>';w.document.write(doc);w.document.close();setTimeout(function(){w.print();},300);}
 
 // ============================================================
