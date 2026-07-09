@@ -574,7 +574,23 @@ var SD = {
     {id:'f064',mes:'Abr-26',fecha:'2026-04-19',num:'',cliente:'Carlos Silva',matricula:'',base:330.58,iva:69.42,total:400.00,concepto:'Cambio rodamientos Fiat Ducato',pago:'Transferencia',estado:'Cobrado'},
     {id:'f065',mes:'Abr-26',fecha:'2026-04-29',num:'',cliente:'Victor Goncalves',matricula:'8702HLS',base:826.45,iva:173.55,total:1000.00,concepto:'Reparacion Fiat Fiorino',pago:'Transferencia',estado:'Cobrado'},
     {id:'f066',mes:'Abr-26',fecha:'2026-04-29',num:'',cliente:'Nelson Lopez',matricula:'5029KYR',base:586.78,iva:123.22,total:710.00,concepto:'Trompa (pendiente una parte de pago 400 euros)',pago:'Transferencia',estado:'Cobrado'},
-    {id:'f067',mes:'Abr-26',fecha:'2026-04-19',num:'70426056',cliente:'Onus Express',matricula:'0899KRC',base:165.29,iva:34.71,total:200.00,concepto:'Fiat Ducato Revision A/C, estanqueidad circuito, cambio juntas, carga aceite y refrigerante',pago:'Transferencia',estado:'Cobrado'}
+    {id:'f067',mes:'Abr-26',fecha:'2026-04-19',num:'70426056',cliente:'Onus Express',matricula:'0899KRC',base:165.29,iva:34.71,total:200.00,concepto:'Fiat Ducato Revision A/C, estanqueidad circuito, cambio juntas, carga aceite y refrigerante',pago:'Transferencia',estado:'Cobrado'},
+    // ── ABR-26 extra (desde JSONBin) ──
+    {id:'f068',mes:'Abr-26',fecha:'2026-06-30',num:'300626057',cliente:'Onus Express',matricula:'9676LGH',base:123.97,iva:26.03,total:150.00,concepto:'Reparacion de luces de emergencia',pago:'Transferencia',estado:'Cobrado'},
+    // ── MAY-26 ──
+    {id:'f069',mes:'May-26',fecha:'2026-05-08',num:'080526058',cliente:'Onus Express',matricula:'',base:330.58,iva:69.42,total:400.00,concepto:'Reparacion furgoneta',pago:'Transferencia',estado:'Cobrado'},
+    {id:'f070',mes:'May-26',fecha:'2026-05-14',num:'140526059',cliente:'Onus Express',matricula:'8249HXZ',base:661.16,iva:138.84,total:800.00,concepto:'Reparacion de banda traseras de freno manual, candado t...',pago:'Transferencia',estado:'Cobrado'},
+    // ── JUN-26 ──
+    {id:'f071',mes:'Jun-26',fecha:'2026-06-02',num:'',cliente:'Nabil Jose',matricula:'',base:1000.00,iva:0,total:1000.00,concepto:'trabajo a furgo',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f072',mes:'Jun-26',fecha:'2026-06-09',num:'',cliente:'Ludys Pinto',matricula:'',base:400.00,iva:0,total:400.00,concepto:'coche',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f073',mes:'Jun-26',fecha:'2026-06-09',num:'',cliente:'Nacif Jose',matricula:'',base:100.00,iva:0,total:100.00,concepto:'coche',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f074',mes:'Jun-26',fecha:'2026-06-09',num:'',cliente:'Ruddy Benito',matricula:'',base:500.00,iva:0,total:500.00,concepto:'furgo crafter Alemania',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f075',mes:'Jun-26',fecha:'2026-06-16',num:'',cliente:'tpv',matricula:'',base:113.00,iva:0,total:113.00,concepto:'reparacion coche',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f076',mes:'Jun-26',fecha:'2026-06-26',num:'',cliente:'Nelson Lopez',matricula:'',base:450.00,iva:0,total:450.00,concepto:'Reparacion furgoneta',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f077',mes:'Jun-26',fecha:'2026-06-29',num:'',cliente:'Luder Pinto',matricula:'',base:250.00,iva:0,total:250.00,concepto:'Reparacion',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    // ── JUL-26 ──
+    {id:'f078',mes:'Jul-26',fecha:'2026-07-03',num:'',cliente:'Nelson Lopez',matricula:'',base:200.00,iva:0,total:200.00,concepto:'Reparacion furgonete',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'},
+    {id:'f079',mes:'Jul-26',fecha:'2026-07-04',num:'',cliente:'Randy Lopez',matricula:'',base:200.00,iva:0,total:200.00,concepto:'Reparacion furgoneta',pago:'Transferencia',estado:'Cobrado',tipo:'albaran'}
   ],
   proveedores: [
     {id:'p000a',mes:'Sep-25',fecha:'2025-09-30',num:'FAB25049098',proveedor:'Adbosch',base:726.16,iva:152.49,total:878.65,concepto:'Piezas 10 nov 25',estado:'Pagado'},
@@ -690,22 +706,24 @@ function goTab(name){
 function fusionarArray(local, remoto){
   // Construir mapa por id con el registro más reciente
   var mapa={};
-  // Primero los remotos
-  (remoto||[]).forEach(function(r){
-    if(r&&r.id) mapa[r.id]=r;
-  });
-  // Luego los locales — si el local es más nuevo, gana
+  // Primero los datos locales (incluye datos base del código)
   (local||[]).forEach(function(l){
-    if(!l||!l.id) return;
-    var tsL=l.editadoTs||l.creadoTs||l._ts||0;
-    var tsR=mapa[l.id] ? (mapa[l.id].editadoTs||mapa[l.id].creadoTs||mapa[l.id]._ts||0) : -1;
-    if(tsR===-1 || tsL>=tsR){
-      mapa[l.id]=l; // local más nuevo o registro solo existe en local
+    if(l&&l.id) mapa[l.id]=l;
+  });
+  // Luego los remotos — si el remoto fue editado por el usuario, gana sobre el base
+  (remoto||[]).forEach(function(r){
+    if(!r||!r.id) return;
+    var tsR=r.editadoTs||r.creadoTs||0;
+    var tsL=mapa[r.id] ? (mapa[r.id].editadoTs||mapa[r.id].creadoTs||0) : -1;
+    // El remoto gana si: no existe en local, o fue editado por usuario (tiene creadoTs>0), o es más nuevo
+    var esBaseCodigo = mapa[r.id] && !mapa[r.id].creadoTs; // registro base no tiene creadoTs
+    if(tsL===-1 || tsR>tsL || (!esBaseCodigo && tsR===tsL)){
+      mapa[r.id]=r;
     }
   });
   // Devolver ordenado por fecha descendente
   return Object.values(mapa).sort(function(a,b){
-    return((b.fecha||b.mes||'')>( a.fecha||a.mes||''))?1:-1;
+    return((b.fecha||b.mes||'')>(a.fecha||a.mes||''))?1:-1;
   });
 }
 
