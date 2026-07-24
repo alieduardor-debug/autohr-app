@@ -792,6 +792,8 @@ async function cloudPut(){
   SD._ts      = Date.now();
   SD._user    = USER;
   SD._savedAt = new Date().toISOString();
+  // Guardar backup local SIEMPRE antes de subir a la nube
+  guardarBackupLocal();
   try{
     var r=await fetch(JBIN+BIN,{
       method:'PUT',mode:'cors',credentials:'omit',
@@ -800,7 +802,7 @@ async function cloudPut(){
     });
     if(!r.ok){
       setSyncStatus('err');g('slbl').textContent='Error guardando ('+r.status+')';
-      toast('❌ Error al guardar ('+r.status+'). Pulsa "Forzar subida".');
+      toast('❌ Error al guardar ('+r.status+'). Datos seguros en backup local.');
       showUnsaved(); return false;
     }
     lastSync=new Date();setSyncStatus('ok');
@@ -809,7 +811,7 @@ async function cloudPut(){
     return true;
   }catch(e){
     setSyncStatus('err');g('slbl').textContent='Sin conexion';
-    toast('Sin conexion. Datos seguros en este dispositivo.');
+    toast('Sin conexion. Datos guardados en backup local del dispositivo.');
     showUnsaved();
     console.log('cloudPut error:',e.message);
     return false;
@@ -874,10 +876,25 @@ function startApp(){
   var topU=g('topbar-user');if(topU)topU.textContent=USER;
   var sub=g('topbar-sub');if(sub)sub.textContent=USER;
   initTabs();
-  renderAll();
   loadPerfil();
+
+  // 1. Cargar backup local PRIMERO — datos más recientes del dispositivo
+  var backup=cargarBackupLocal();
+  if(backup){
+    var aplicado=aplicarBackupSiEsMasNuevo(backup);
+    if(aplicado){
+      console.log('Backup local aplicado: '+new Date(backup.ts).toLocaleString('es-ES'));
+      toast('Datos locales recuperados. Sincronizando con servidor...');
+    }
+  }
+
+  // 2. Renderizar con lo que tenemos (base + backup)
+  renderAll();
+
+  // 3. Sincronizar con JSONBin en segundo plano
   cloudGet();
-  // Auto-sync cada 60s — SOLO si no hay modal abierto
+
+  // 4. Auto-sync cada 60s — solo si no hay modal abierto
   setInterval(function(){
     if(!document.hidden&&BIN){
       var modalAbierto=document.querySelector('.mbg.on');
@@ -1267,7 +1284,50 @@ function logActividad(accion,tipo,detalle){if(!SD.actividad)SD.actividad=[];SD.a
 // NUMERACION FACTURAS
 // ============================================================
 // ============================================================
-// GESTION SECUENCIA FACTURAS
+// BACKUP LOCAL — copia de seguridad en localStorage
+// Se guarda cada vez que hay cambios y se restaura si JSONBin falla
+// ============================================================
+var BACKUP_KEY='autohr_backup_v2';
+
+function guardarBackupLocal(){
+  try{
+    var backup={
+      ts: Date.now(),
+      facturas:    SD.facturas,
+      proveedores: SD.proveedores,
+      gastosFijos: SD.gastosFijos,
+      gastosVariables: SD.gastosVariables,
+      numNext: SD.numNext,
+      actividad: (SD.actividad||[]).slice(0,50)
+    };
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+  }catch(e){ console.log('Backup local error:',e.message); }
+}
+
+function cargarBackupLocal(){
+  try{
+    var raw=localStorage.getItem(BACKUP_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+function aplicarBackupSiEsMasNuevo(backup){
+  if(!backup||!backup.facturas) return false;
+  var tsBackup=backup.ts||0;
+  var tsSD=SD._ts||0;
+  // El backup local gana si es más nuevo que lo que hay en SD
+  if(tsBackup>tsSD){
+    SD.facturas        = fusionarArray(SD.facturas,        backup.facturas);
+    SD.proveedores     = fusionarArray(SD.proveedores,     backup.proveedores||[]);
+    SD.gastosFijos     = fusionarArray(SD.gastosFijos,     backup.gastosFijos||[]);
+    SD.gastosVariables = fusionarArray(SD.gastosVariables, backup.gastosVariables||[]);
+    if(backup.numNext) SD.numNext=Math.max(SD.numNext||57, backup.numNext);
+    SD._ts=tsBackup;
+    return true;
+  }
+  return false;
+}
 // ============================================================
 function getNextNumSeq(){
   // Calcular el máximo secuencial usado en todas las facturas
