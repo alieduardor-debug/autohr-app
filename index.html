@@ -878,29 +878,39 @@ function startApp(){
   initTabs();
   loadPerfil();
 
-  // 1. Cargar backup local PRIMERO — datos más recientes del dispositivo
-  var backup=cargarBackupLocal();
-  if(backup){
-    var aplicado=aplicarBackupSiEsMasNuevo(backup);
-    if(aplicado){
-      console.log('Backup local aplicado: '+new Date(backup.ts).toLocaleString('es-ES'));
-      toast('Datos locales recuperados. Sincronizando con servidor...');
-    }
+  // PASO 1 — Cargar datos BASE del código como punto de partida
+  SD.facturas        = SD_BASE.facturas.slice();
+  SD.proveedores     = SD_BASE.proveedores.slice();
+  SD.gastosFijos     = SD_BASE.gastosFijos.slice();
+  SD.gastosVariables = SD_BASE.gastosVariables.slice();
+  SD.numNext         = SD_BASE.numNext;
+
+  // PASO 2 — Fusionar con backup local del dispositivo (datos introducidos desde la app)
+  var backup = cargarBackupLocal();
+  if(backup && backup.ts > 0){
+    SD.facturas        = fusionarArray(SD.facturas, backup.facturas||[]);
+    SD.proveedores     = fusionarArray(SD.proveedores, backup.proveedores||[]);
+    SD.gastosFijos     = fusionarArray(SD.gastosFijos, backup.gastosFijos||[]);
+    SD.gastosVariables = fusionarArray(SD.gastosVariables, backup.gastosVariables||[]);
+    if(backup.numNext) SD.numNext = Math.max(SD.numNext, backup.numNext);
+    if(backup.actividad) SD.actividad = backup.actividad;
+    SD._ts = backup.ts;
+    console.log('Backup local cargado: '+new Date(backup.ts).toLocaleString('es-ES'));
   }
 
-  // 2. Renderizar con lo que tenemos (base + backup)
+  // PASO 3 — Renderizar con lo que tenemos ANTES de conectar a la red
   renderAll();
 
-  // 3. Sincronizar con JSONBin en segundo plano
+  // PASO 4 — Sincronizar con JSONBin en segundo plano (fusiona sin perder nada)
   cloudGet();
 
-  // 4. Auto-sync cada 60s — solo si no hay modal abierto
+  // PASO 5 — Auto-sync cada 60s solo si no hay modal abierto
   setInterval(function(){
-    if(!document.hidden&&BIN){
-      var modalAbierto=document.querySelector('.mbg.on');
+    if(!document.hidden && BIN){
+      var modalAbierto = document.querySelector('.mbg.on');
       if(!modalAbierto) cloudGet();
     }
-  },60000);
+  }, 60000);
 }
 
 function logout(){
