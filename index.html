@@ -1907,24 +1907,117 @@ async function testConexion(){
 
 function leerPDFProveedor(input){
   var file=input.files[0];if(!file)return;
-  var status=g('pdf-prov-status');status.textContent='Leyendo PDF...';status.style.color='var(--blue)';
+  var status=g('pdf-prov-status');
+  status.textContent='Leyendo PDF...';status.style.color='var(--blue)';
+
+  // Validar que es PDF
+  if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){
+    status.textContent='Error: el archivo no es un PDF válido.';
+    status.style.color='var(--red)';return;
+  }
+  // Validar tamaño (máx 5MB)
+  if(file.size>5*1024*1024){
+    status.textContent='Error: el PDF es demasiado grande (máx 5MB).';
+    status.style.color='var(--red)';return;
+  }
+
   var reader=new FileReader();
+  reader.onerror=function(){
+    status.textContent='Error al leer el archivo. Inténtalo de nuevo.';
+    status.style.color='var(--red)';
+  };
   reader.onload=function(e){
-    var base64=e.result.split(',')[1];status.textContent='Analizando con IA...';
-    fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:'Extrae de esta factura SOLO este JSON sin texto extra: {"proveedor":"","num_factura":"","fecha":"YYYY-MM-DD","base_imponible":0,"iva":0,"total":0,"concepto":""}'}]}]})})
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var texto=(data.content&&data.content[0])?data.content[0].text:'';var start=texto.indexOf('{');var end=texto.lastIndexOf('}');if(start<0||end<0)throw new Error('No JSON');
-      var info=JSON.parse(texto.slice(start,end+1));
-      if(info.proveedor){var el=g('mp-prov');if(el)el.value=info.proveedor;}
-      if(info.num_factura){var el=g('mp-num');if(el)el.value=info.num_factura;}
-      if(info.fecha){var el=g('mp-fecha');if(el)el.value=info.fecha;}
-      if(info.base_imponible){var el=g('mp-base');if(el){el.value=Number(info.base_imponible).toFixed(2);calcP();}}
-      if(info.concepto){var el=g('mp-conc');if(el)el.value=info.concepto;}
-      if(info.fecha){var d=new Date(info.fecha);var nm=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];var ms=nm[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2);var sel=g('mp-mes');if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===ms){sel.value=ms;break;}}}}
-      status.textContent='Datos cargados. Revisa y confirma.';status.style.color='var(--green)';checkDupProv();
-    }).catch(function(){status.textContent='Error al analizar PDF. Rellena manualmente.';status.style.color='var(--red)';});
-  };reader.readAsDataURL(file);
+    var base64=e.result.split(',')[1];
+    if(!base64){status.textContent='Error al procesar el PDF.';status.style.color='var(--red)';return;}
+    status.textContent='Analizando factura con IA...';status.style.color='var(--blue)';
+
+    var payload={
+      model:'claude-haiku-4-5-20251001',
+      max_tokens:500,
+      messages:[{
+        role:'user',
+        content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+          {type:'text',text:'Extrae de esta factura de proveedor SOLO este JSON sin texto extra ni markdown:\n{"proveedor":"","num_factura":"","fecha":"YYYY-MM-DD","base_imponible":0,"iva":0,"total":0,"concepto":""}'}
+        ]
+      }]
+    };
+
+    // Intentar con proxy CORS primero, luego directo
+    var urls=[
+      'https://corsproxy.io/?url='+encodeURIComponent('https://api.anthropic.com/v1/messages'),
+      'https://api.anthropic.com/v1/messages'
+    ];
+    var intentoIdx=0;
+
+    function intentar(){
+      if(intentoIdx>=urls.length){
+        status.textContent='No se pudo conectar con la IA. Rellena los datos manualmente.';
+        status.style.color='var(--orange)';
+        return;
+      }
+      var url=urls[intentoIdx++];
+      fetch(url,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify(payload)
+      })
+      .then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(data){
+        var texto='';
+        if(data.content&&data.content[0]&&data.content[0].text){
+          texto=data.content[0].text;
+        }else if(data.error){
+          throw new Error(data.error.message||'Error IA');
+        }
+        // Extraer JSON de la respuesta
+        var start=texto.indexOf('{');
+        var end=texto.lastIndexOf('}');
+        if(start<0||end<0)throw new Error('No se encontraron datos en la factura');
+        var info=JSON.parse(texto.slice(start,end+1));
+
+        // Rellenar campos del formulario
+        var cambios=0;
+        if(info.proveedor){var el=g('mp-prov');if(el){el.value=info.proveedor;cambios++;}}
+        if(info.num_factura){var el=g('mp-num');if(el){el.value=info.num_factura;cambios++;}}
+        if(info.fecha){var el=g('mp-fecha');if(el){el.value=info.fecha;cambios++;
+          // Detectar mes automáticamente
+          var d=new Date(info.fecha);
+          var nm=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+          var ms=nm[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2);
+          var sel=g('mp-mes');
+          if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===ms){sel.value=ms;break;}}}
+        }}
+        if(info.base_imponible&&info.base_imponible!==0){
+          var el=g('mp-base');if(el){el.value=Number(info.base_imponible).toFixed(2);calcP();cambios++;}
+        }
+        if(info.concepto){var el=g('mp-conc');if(el){el.value=info.concepto;cambios++;}}
+
+        if(cambios>0){
+          status.textContent='✅ '+cambios+' campo(s) rellenados automáticamente. Revisa y confirma.';
+          status.style.color='var(--green)';
+        }else{
+          status.textContent='⚠️ PDF procesado pero no se encontraron datos. Rellena manualmente.';
+          status.style.color='var(--orange)';
+        }
+        checkDupProv();
+      })
+      .catch(function(err){
+        console.log('Intento '+(intentoIdx)+' fallido:',err.message);
+        // Reintentar con siguiente URL
+        intentar();
+      });
+    }
+    intentar();
+  };
+  reader.readAsDataURL(file);
 }
 
 function generarQR(f){
