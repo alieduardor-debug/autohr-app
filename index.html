@@ -703,29 +703,8 @@ function goTab(name){
 // Nunca se pierden datos aunque Ali y Yusef guarden a la vez.
 // ============================================================
 
-function fusionarArray(local, remoto){
-  // Construir mapa por id con el registro más reciente
-  var mapa={};
-  // Primero los datos locales (incluye datos base del código)
-  (local||[]).forEach(function(l){
-    if(l&&l.id) mapa[l.id]=l;
-  });
-  // Luego los remotos — si el remoto fue editado por el usuario, gana sobre el base
-  (remoto||[]).forEach(function(r){
-    if(!r||!r.id) return;
-    var tsR=r.editadoTs||r.creadoTs||0;
-    var tsL=mapa[r.id] ? (mapa[r.id].editadoTs||mapa[r.id].creadoTs||0) : -1;
-    // El remoto gana si: no existe en local, o fue editado por usuario (tiene creadoTs>0), o es más nuevo
-    var esBaseCodigo = mapa[r.id] && !mapa[r.id].creadoTs; // registro base no tiene creadoTs
-    if(tsL===-1 || tsR>tsL || (!esBaseCodigo && tsR===tsL)){
-      mapa[r.id]=r;
-    }
-  });
-  // Devolver ordenado por fecha descendente
-  return Object.values(mapa).sort(function(a,b){
-    return((b.fecha||b.mes||'')>(a.fecha||a.mes||''))?1:-1;
-  });
-}
+// ── fusionarArray es alias de fusionar para compatibilidad ──
+function fusionarArray(a,b){ return fusionar(a,b); }
 
 async function cloudGet(){
   if(!BIN||!KEY) return;
@@ -872,43 +851,40 @@ async function doSetup(){
 }
 
 function startApp(){
-  g('adj-user').textContent=USER;
-  var topU=g('topbar-user');if(topU)topU.textContent=USER;
-  var sub=g('topbar-sub');if(sub)sub.textContent=USER;
+  g('adj-user').textContent = USER;
+  var topU = g('topbar-user'); if(topU) topU.textContent = USER;
+  var sub  = g('topbar-sub');  if(sub)  sub.textContent  = USER;
   initTabs();
   loadPerfil();
 
-  // PASO 1 — Cargar datos BASE del código como punto de partida
+  // PASO 1 — Partir siempre desde los datos BASE del código
   SD.facturas        = SD_BASE.facturas.slice();
   SD.proveedores     = SD_BASE.proveedores.slice();
   SD.gastosFijos     = SD_BASE.gastosFijos.slice();
   SD.gastosVariables = SD_BASE.gastosVariables.slice();
   SD.numNext         = SD_BASE.numNext;
+  SD._ts             = 0;
 
-  // PASO 2 — Fusionar con backup local del dispositivo (datos introducidos desde la app)
+  // PASO 2 — Fusionar con backup local del dispositivo (nunca se pierde)
   var backup = cargarBackupLocal();
-  if(backup && backup.ts > 0){
-    SD.facturas        = fusionarArray(SD.facturas, backup.facturas||[]);
-    SD.proveedores     = fusionarArray(SD.proveedores, backup.proveedores||[]);
-    SD.gastosFijos     = fusionarArray(SD.gastosFijos, backup.gastosFijos||[]);
-    SD.gastosVariables = fusionarArray(SD.gastosVariables, backup.gastosVariables||[]);
-    if(backup.numNext) SD.numNext = Math.max(SD.numNext, backup.numNext);
-    if(backup.actividad) SD.actividad = backup.actividad;
-    SD._ts = backup.ts;
-    console.log('Backup local cargado: '+new Date(backup.ts).toLocaleString('es-ES'));
+  if(backup && (backup.facturas||[]).length > 0){
+    fusionarConSD(backup);
+    SD._ts = backup.ts || 0;
+    console.log('Backup local aplicado: '+
+      (backup.facturas||[]).length+' facturas, '+
+      (backup.proveedores||[]).length+' proveedores');
   }
 
-  // PASO 3 — Renderizar con lo que tenemos ANTES de conectar a la red
+  // PASO 3 — Renderizar inmediatamente con lo que tenemos
   renderAll();
 
-  // PASO 4 — Sincronizar con JSONBin en segundo plano (fusiona sin perder nada)
+  // PASO 4 — Sincronizar con JSONBin en segundo plano
   cloudGet();
 
-  // PASO 5 — Auto-sync cada 60s solo si no hay modal abierto
+  // PASO 5 — Auto-sync cada 60 segundos
   setInterval(function(){
-    if(!document.hidden && BIN){
-      var modalAbierto = document.querySelector('.mbg.on');
-      if(!modalAbierto) cloudGet();
+    if(!document.hidden && BIN && !document.querySelector('.mbg.on')){
+      cloudGet();
     }
   }, 60000);
 }
@@ -1294,49 +1270,224 @@ function logActividad(accion,tipo,detalle){if(!SD.actividad)SD.actividad=[];SD.a
 // NUMERACION FACTURAS
 // ============================================================
 // ============================================================
-// BACKUP LOCAL — copia de seguridad en localStorage
-// Se guarda cada vez que hay cambios y se restaura si JSONBin falla
+// SYNC v4 — Read-Modify-Write OBLIGATORIO
+// Nunca se hace PUT sin antes hacer GET y fusionar
 // ============================================================
-var BACKUP_KEY='autohr_backup_v2';
+
+var BACKUP_KEY = 'autohr_backup_v3';
 
 function guardarBackupLocal(){
   try{
-    var backup={
-      ts: Date.now(),
+    localStorage.setItem(BACKUP_KEY, JSON.stringify({
+      ts:          Date.now(),
       facturas:    SD.facturas,
       proveedores: SD.proveedores,
       gastosFijos: SD.gastosFijos,
       gastosVariables: SD.gastosVariables,
-      numNext: SD.numNext,
-      actividad: (SD.actividad||[]).slice(0,50)
-    };
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
-  }catch(e){ console.log('Backup local error:',e.message); }
+      numNext:     SD.numNext,
+      actividad:   (SD.actividad||[]).slice(0,100),
+      perfil:      SD.perfil
+    }));
+  }catch(e){ console.log('guardarBackupLocal error:',e.message); }
 }
 
 function cargarBackupLocal(){
   try{
-    var raw=localStorage.getItem(BACKUP_KEY);
-    if(!raw) return null;
-    return JSON.parse(raw);
+    var raw = localStorage.getItem(BACKUP_KEY);
+    return raw ? JSON.parse(raw) : null;
   }catch(e){ return null; }
 }
 
-function aplicarBackupSiEsMasNuevo(backup){
-  if(!backup||!backup.facturas) return false;
-  var tsBackup=backup.ts||0;
-  var tsSD=SD._ts||0;
-  // El backup local gana si es más nuevo que lo que hay en SD
-  if(tsBackup>tsSD){
-    SD.facturas        = fusionarArray(SD.facturas,        backup.facturas);
-    SD.proveedores     = fusionarArray(SD.proveedores,     backup.proveedores||[]);
-    SD.gastosFijos     = fusionarArray(SD.gastosFijos,     backup.gastosFijos||[]);
-    SD.gastosVariables = fusionarArray(SD.gastosVariables, backup.gastosVariables||[]);
-    if(backup.numNext) SD.numNext=Math.max(SD.numNext||57, backup.numNext);
-    SD._ts=tsBackup;
-    return true;
+// Fusión aditiva pura — un registro nunca desaparece
+function fusionar(arr1, arr2){
+  var mapa = {};
+  (arr1||[]).forEach(function(r){ if(r&&r.id) mapa[r.id]=r; });
+  (arr2||[]).forEach(function(r){
+    if(!r||!r.id) return;
+    if(!mapa[r.id]){
+      mapa[r.id]=r;
+    } else {
+      var ts1=mapa[r.id].editadoTs||mapa[r.id].creadoTs||0;
+      var ts2=r.editadoTs||r.creadoTs||0;
+      if(ts2>ts1) mapa[r.id]=r;
+    }
+  });
+  return Object.values(mapa).sort(function(a,b){
+    return (b.fecha||'')>(a.fecha||'')?1:-1;
+  });
+}
+function fusionarArray(a,b){ return fusionar(a,b); }
+
+function fusionarConSD(fuente){
+  if(!fuente) return;
+  if(fuente.facturas&&fuente.facturas.length)
+    SD.facturas=fusionar(SD.facturas,fuente.facturas);
+  if(fuente.proveedores&&fuente.proveedores.length)
+    SD.proveedores=fusionar(SD.proveedores,fuente.proveedores);
+  if(fuente.gastosFijos&&fuente.gastosFijos.length)
+    SD.gastosFijos=fusionar(SD.gastosFijos,fuente.gastosFijos);
+  if(fuente.gastosVariables&&fuente.gastosVariables.length)
+    SD.gastosVariables=fusionar(SD.gastosVariables,fuente.gastosVariables);
+  if(fuente.numNext) SD.numNext=Math.max(SD.numNext||60,fuente.numNext);
+  if(fuente.perfil&&Object.keys(fuente.perfil).length)
+    SD.perfil=Object.assign({},SD.perfil,fuente.perfil);
+  if(fuente.actividad&&fuente.actividad.length){
+    var m={};
+    (SD.actividad||[]).forEach(function(a){m[a.ts+'_'+(a.usuario||'')]=a;});
+    (fuente.actividad||[]).forEach(function(a){m[a.ts+'_'+(a.usuario||'')]=a;});
+    SD.actividad=Object.values(m)
+      .sort(function(a,b){return(b.ts||'')>(a.ts||'')?1:-1;})
+      .slice(0,100);
   }
-  return false;
+}
+
+// ── GET seguro desde JSONBin ──────────────────────────────────
+async function jsonbinGet(){
+  var r = await fetch(JBIN+BIN+'/latest',{
+    method:'GET', mode:'cors', credentials:'omit',
+    headers:{
+      'X-Master-Key': KEY,
+      'X-Bin-Meta':   'false'
+    }
+  });
+  if(!r.ok) throw new Error('GET '+r.status);
+  var d = await r.json();
+  // Validar que la respuesta tiene estructura correcta
+  if(!d || typeof d !== 'object') throw new Error('Respuesta invalida');
+  return d;
+}
+
+// ── PUT seguro a JSONBin ──────────────────────────────────────
+async function jsonbinPut(datos){
+  var r = await fetch(JBIN+BIN,{
+    method:'PUT', mode:'cors', credentials:'omit',
+    headers:{
+      'Content-Type':      'application/json',
+      'X-Master-Key':      KEY,
+      'X-Bin-Versioning':  'false'
+    },
+    body: JSON.stringify(datos)
+  });
+  if(!r.ok) throw new Error('PUT '+r.status);
+  return await r.json();
+}
+
+// ── READ-MODIFY-WRITE: el único camino para guardar ──────────
+// Paso a: GET actual
+// Paso b: Validar
+// Paso c: Fusionar (merge)
+// Paso d: PUT resultado
+async function readModifyWrite(){
+  // Paso a+b: GET y validar
+  var servidorActual = null;
+  try{
+    servidorActual = await jsonbinGet();
+  }catch(e){
+    console.log('GET fallido antes de PUT:',e.message);
+    // Si el GET falla, NO hacemos PUT (evitar sobreescribir con datos incompletos)
+    // Solo guardamos en backup local
+    guardarBackupLocal();
+    throw new Error('No se pudo leer el servidor. Datos guardados en backup local.');
+  }
+
+  // Paso c: Fusionar datos del servidor con los locales actuales
+  // El servidor manda, pero los datos locales TAMBIÉN se preservan
+  if(servidorActual && servidorActual.facturas && servidorActual.facturas.length > 0){
+    fusionarConSD(servidorActual);
+  }
+
+  // Marcar timestamp y usuario
+  SD._ts      = Date.now();
+  SD._user    = USER;
+  SD._savedAt = new Date().toISOString();
+
+  // Guardar backup local con datos ya fusionados
+  guardarBackupLocal();
+
+  // Paso d: PUT con datos completos fusionados
+  await jsonbinPut(SD);
+}
+
+// ── cloudPut: usa Read-Modify-Write siempre ──────────────────
+async function cloudPut(){
+  if(!BIN||!KEY) return false;
+  setSyncStatus('sy');
+  try{
+    await readModifyWrite();
+    lastSync=new Date();
+    setSyncStatus('ok');
+    g('slbl').textContent='Guardado ✓';
+    updateSyncLabel();
+    hideUnsaved();
+    return true;
+  }catch(e){
+    setSyncStatus('err');
+    g('slbl').textContent='Error guardando';
+    toast('⚠️ '+e.message);
+    showUnsaved();
+    console.log('cloudPut error:',e.message);
+    return false;
+  }
+}
+
+// ── cloudGet: solo descarga y fusiona, nunca sobreescribe ─────
+async function cloudGet(){
+  if(!BIN||!KEY) return;
+  if(document.querySelector('.mbg.on')) return;
+  setSyncStatus('sy');
+  try{
+    var d = await jsonbinGet();
+    if(d && d.facturas && d.facturas.length > 0){
+      // Fusionar servidor con local — aditivo
+      fusionarConSD(d);
+      guardarBackupLocal();
+      // Si local es más nuevo, subir (usando Read-Modify-Write)
+      if((SD._ts||0) > (d._ts||0)){
+        await readModifyWrite();
+      } else {
+        SD._ts = d._ts||SD._ts;
+      }
+    } else {
+      // Servidor vacío: subir local con Read-Modify-Write
+      await readModifyWrite();
+      toast('Servidor vacio — datos subidos ✅');
+    }
+    lastSync=new Date();
+    setSyncStatus('ok');
+    g('slbl').textContent='Sincronizado';
+    updateSyncLabel();
+    hideUnsaved();
+    renderAll();
+  }catch(e){
+    setSyncStatus('err');
+    g('slbl').textContent='Sin conexion';
+    console.log('cloudGet error:',e.message);
+    renderAll();
+  }
+}
+
+// ── Forzar subida: Read-Modify-Write explícito ───────────────
+async function forzarSubida(){
+  if(!BIN||!KEY){ toast('Configura JSONBin primero'); return; }
+  toast('Leyendo servidor y fusionando...');
+  setSyncStatus('sy');
+  try{
+    await readModifyWrite();
+    toast('✅ Datos fusionados y guardados en servidor');
+    renderAll();
+  }catch(e){
+    toast('❌ '+e.message);
+    setSyncStatus('err');
+  }
+}
+
+async function syncNow(){
+  if(document.querySelector('.mbg.on')){
+    toast('Cierra el formulario antes de sincronizar');
+    return;
+  }
+  await cloudGet();
+  toast('Sincronizacion completada ✅');
 }
 // ============================================================
 function getNextNumSeq(){
