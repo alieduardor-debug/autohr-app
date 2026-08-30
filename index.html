@@ -123,6 +123,17 @@ textarea{resize:vertical;min-height:60px}
   gap:7px;
   padding:5px 10px 8px;
 }
+/* Barra de mes situada entre el total y el listado */
+.mes-bar{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:0 0 10px;
+  padding:7px 11px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+}
 .mes-activo-txt{
   font-size:12px;
   font-weight:700;
@@ -214,11 +225,6 @@ textarea{resize:vertical;min-height:60px}
 
   <div class="sec" id="sec-facturas">
     <div class="sticky-tabs-wrap">
-      <div class="mes-activo-badge">
-        <span style="font-size:16px">📅</span>
-        <span class="mes-activo-txt" id="f-mes-badge">—</span>
-        <span class="mes-activo-count" id="f-mes-count"></span>
-      </div>
       <div class="tabs" id="ft"></div>
       <div style="display:flex;gap:8px;padding-top:6px">
         <div class="srch" style="flex:1"><span class="srch-ico">&#128269;</span><input type="text" id="fsrch" placeholder="Buscar cliente, matricula..." oninput="renderFacts()"></div>
@@ -226,16 +232,16 @@ textarea{resize:vertical;min-height:60px}
       </div>
     </div>
     <div id="f-sum"></div>
+    <div class="mes-bar" id="f-mes-bar">
+      <span style="font-size:16px">📅</span>
+      <span class="mes-activo-txt" id="f-mes-badge">—</span>
+      <span class="mes-activo-count" id="f-mes-count"></span>
+    </div>
     <div id="f-list"></div>
   </div>
 
   <div class="sec" id="sec-proveedores">
     <div class="sticky-tabs-wrap">
-      <div class="mes-activo-badge">
-        <span style="font-size:16px">📅</span>
-        <span class="mes-activo-txt" id="p-mes-badge">—</span>
-        <span class="mes-activo-count" id="p-mes-count"></span>
-      </div>
       <div class="tabs" id="pt"></div>
       <div style="display:flex;gap:8px;padding-top:6px">
         <div class="srch" style="flex:1"><span class="srch-ico">&#128269;</span><input type="text" id="psrch" placeholder="Buscar proveedor, factura..." oninput="renderProvs()"></div>
@@ -243,6 +249,11 @@ textarea{resize:vertical;min-height:60px}
       </div>
     </div>
     <div id="p-sum"></div>
+    <div class="mes-bar" id="p-mes-bar">
+      <span style="font-size:16px">📅</span>
+      <span class="mes-activo-txt" id="p-mes-badge">—</span>
+      <span class="mes-activo-count" id="p-mes-count"></span>
+    </div>
     <div id="p-list"></div>
   </div>
 
@@ -322,6 +333,16 @@ textarea{resize:vertical;min-height:60px}
     <button class="btn bs" onclick="testConexion()">Verificar conexion JSONBin</button>
     <button class="btn bo" onclick="exportJSON()">Exportar JSON</button>
     <button class="btn bs" onclick="exportExcel()">Exportar Excel (.xlsx)</button>
+    <div class="lbl">Copias de seguridad</div>
+    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:12px;margin-bottom:10px;font-size:12px;color:#166534;line-height:1.7">
+      La app guarda una copia en <b>este movil</b> cada vez que cambian los datos y antes de cada subida.
+      Se conservan las <b>12 ultimas</b>. Restaurar es siempre <b>aditivo</b>: recupera lo que falte y no borra nada.
+    </div>
+    <button class="btn bs" onclick="crearSnapshotManual()">&#128190; Crear copia ahora</button>
+    <button class="btn bo" onclick="descargarCopia()">&#11015; Descargar copia (.json)</button>
+    <button class="btn" onclick="document.getElementById('imp-copia').click()">&#11014; Restaurar desde archivo .json</button>
+    <input type="file" id="imp-copia" accept="application/json,.json" style="display:none" onchange="importarCopia(this)">
+    <div id="snaps-lista" style="margin-top:8px"></div>
     <div class="lbl">Historial de actividad</div>
     <div id="actividad-lista" style="max-height:280px;overflow-y:auto"></div>
     <div class="lbl">Numeracion de facturas</div>
@@ -339,7 +360,7 @@ textarea{resize:vertical;min-height:60px}
     </div>
     <div class="lbl">Sesion</div>
     <button class="btn br" onclick="logout()">Cerrar sesion</button>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--t4)">Auto H&amp;R v11 - 2026</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--t4)">Auto H&amp;R v42 - 2026</div>
   </div>
 
 </div><!-- /content -->
@@ -654,8 +675,20 @@ var SD = {
     iban:'ES41 2100 8758 9802 0012 8887',
     banco:'CaixaBank',titular_cuenta:'Ali Eduardo Rebolledo Lozada',
     nombre_empresa:'Auto H&R',logo_letra:'HR'
-  }
+  },
+  borrados: []
 };
+
+// Copia inmutable de los datos historicos que viven en el codigo.
+// Es el suelo del que parte la app: nunca se modifica en caliente.
+var SD_BASE = JSON.parse(JSON.stringify({
+  facturas:        SD.facturas,
+  proveedores:     SD.proveedores,
+  gastosFijos:     SD.gastosFijos,
+  gastosVariables: SD.gastosVariables,
+  numNext:         SD.numNext,
+  perfil:          SD.perfil
+}));
 
 // ============================================================
 // UTILS
@@ -673,8 +706,11 @@ function setSyncStatus(s){
 }
 
 // Banner sin guardar
-function showUnsaved(){ var b=g('unsaved-banner');if(b)b.classList.add('on'); }
-function hideUnsaved(){ var b=g('unsaved-banner');if(b)b.classList.remove('on'); }
+function showUnsaved(){ hayCambiosSinSubir=true; var b=g('unsaved-banner');if(b)b.classList.add('on'); }
+function hideUnsaved(){ hayCambiosSinSubir=false; var b=g('unsaved-banner');if(b)b.classList.remove('on'); }
+window.addEventListener('beforeunload', function(ev){
+  if(hayCambiosSinSubir){ ev.preventDefault(); ev.returnValue=''; return ''; }
+});
 
 // ============================================================
 // NAVIGATION
@@ -690,145 +726,7 @@ function goTab(name){
   if(name==='gastos')renderGastos();
   if(name==='fiscal')renderFiscal();
   if(name==='tesoreria')renderTesoreria();
-  if(name==='ajustes')loadPerfil();
-}
-
-// ============================================================
-// CLOUD SYNC — CORREGIDO (sin datosOK que borraba los datos)
-// ============================================================
-// ============================================================
-// SYNC MEJORADO — fusión inteligente de datos
-// En lugar de sobreescribir, combina los registros de ambos
-// dispositivos usando el id como clave única.
-// Nunca se pierden datos aunque Ali y Yusef guarden a la vez.
-// ============================================================
-
-// ── fusionarArray es alias de fusionar para compatibilidad ──
-function fusionarArray(a,b){ return fusionar(a,b); }
-
-async function cloudGet(){
-  if(!BIN||!KEY) return;
-  var modalAbierto=document.querySelector('.mbg.on');
-  if(modalAbierto) return; // silencioso si hay modal abierto
-  setSyncStatus('sy');
-  try{
-    var r=await fetch(JBIN+BIN+'/latest',{method:'GET',mode:'cors',credentials:'omit',
-      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
-    if(r.status===401||r.status===403){setSyncStatus('err');g('slbl').textContent='API Key incorrecta';return;}
-    if(r.status===404){setSyncStatus('err');g('slbl').textContent='Bin ID incorrecto';return;}
-    if(!r.ok){setSyncStatus('err');g('slbl').textContent='Error '+r.status;return;}
-    var d=await r.json();
-
-    if(d&&typeof d==='object'&&d.facturas&&d.facturas.length>0){
-      // FUSIÓN INTELIGENTE: combinar local + servidor sin perder nada
-      SD.facturas        = fusionarArray(SD.facturas,        d.facturas);
-      SD.proveedores     = fusionarArray(SD.proveedores,     d.proveedores);
-      SD.gastosFijos     = fusionarArray(SD.gastosFijos,     d.gastosFijos);
-      SD.gastosVariables = fusionarArray(SD.gastosVariables, d.gastosVariables);
-      // numNext: usar el mayor entre local y servidor
-      if(d.numNext) SD.numNext=Math.max(SD.numNext||57, d.numNext);
-      // perfil: servidor gana si es más nuevo
-      if(d.perfil&&(d._ts||0)>=(SD._ts||0)) SD.perfil=Object.assign({},SD.perfil,d.perfil);
-      // actividad: fusionar y limitar a 100
-      if(d.actividad&&d.actividad.length){
-        var actMapa={};
-        (SD.actividad||[]).forEach(function(a){actMapa[a.ts+'_'+a.usuario]=a;});
-        (d.actividad||[]).forEach(function(a){actMapa[a.ts+'_'+a.usuario]=a;});
-        SD.actividad=Object.values(actMapa).sort(function(a,b){return(b.ts||'')>(a.ts||'')?1:-1;}).slice(0,100);
-      }
-      // Guardar timestamp del servidor para referencia
-      SD._tsServer=d._ts||0;
-      hideUnsaved();
-      lastSync=new Date();setSyncStatus('ok');
-      g('slbl').textContent='Sincronizado';
-      updateSyncLabel();renderAll();
-      // Si tenemos datos más nuevos localmente, subirlos silenciosamente
-      if((SD._ts||0)>(d._ts||0)){
-        await cloudPut();
-      }
-    } else if(!d||!d.facturas||d.facturas.length===0){
-      // Servidor vacío → subir datos locales
-      await cloudPut();
-      toast('Servidor vacio — datos locales subidos ✅');
-      lastSync=new Date();setSyncStatus('ok');updateSyncLabel();
-    }
-  }catch(e){
-    setSyncStatus('err');
-    var msg=e.message||'';
-    if(msg.includes('Load failed')||msg.includes('Failed to fetch')||msg.includes('NetworkError')){
-      g('slbl').textContent='Sin conexion';
-    } else {
-      g('slbl').textContent='Error red';
-      console.log('cloudGet error:',e.message);
-    }
-    renderAll(); // mostrar datos locales aunque falle la red
-  }
-}
-
-async function cloudPut(){
-  if(!BIN||!KEY) return false;
-  setSyncStatus('sy');
-  SD._ts      = Date.now();
-  SD._user    = USER;
-  SD._savedAt = new Date().toISOString();
-  // Guardar backup local SIEMPRE antes de subir a la nube
-  guardarBackupLocal();
-  try{
-    var r=await fetch(JBIN+BIN,{
-      method:'PUT',mode:'cors',credentials:'omit',
-      headers:{'Content-Type':'application/json','X-Master-Key':KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify(SD)
-    });
-    if(!r.ok){
-      setSyncStatus('err');g('slbl').textContent='Error guardando ('+r.status+')';
-      toast('❌ Error al guardar ('+r.status+'). Datos seguros en backup local.');
-      showUnsaved(); return false;
-    }
-    lastSync=new Date();setSyncStatus('ok');
-    g('slbl').textContent='Guardado ✓';
-    updateSyncLabel();hideUnsaved();
-    return true;
-  }catch(e){
-    setSyncStatus('err');g('slbl').textContent='Sin conexion';
-    toast('Sin conexion. Datos guardados en backup local del dispositivo.');
-    showUnsaved();
-    console.log('cloudPut error:',e.message);
-    return false;
-  }
-}
-
-async function forzarSubida(){
-  if(!BIN||!KEY){toast('Configura JSONBin primero');return;}
-  toast('Subiendo datos...');
-  // Antes de subir, descargar y fusionar para no perder lo del otro usuario
-  try{
-    var r=await fetch(JBIN+BIN+'/latest',{method:'GET',mode:'cors',credentials:'omit',
-      headers:{'X-Master-Key':KEY,'X-Bin-Meta':'false'}});
-    if(r.ok){
-      var d=await r.json();
-      if(d&&d.facturas&&d.facturas.length>0){
-        SD.facturas        = fusionarArray(SD.facturas,        d.facturas);
-        SD.proveedores     = fusionarArray(SD.proveedores,     d.proveedores);
-        SD.gastosFijos     = fusionarArray(SD.gastosFijos,     d.gastosFijos);
-        SD.gastosVariables = fusionarArray(SD.gastosVariables, d.gastosVariables);
-        if(d.numNext) SD.numNext=Math.max(SD.numNext||57,d.numNext);
-      }
-    }
-  }catch(e){ /* si falla la descarga previa, subir lo que tenemos */ }
-  var ok=await cloudPut();
-  if(ok){
-    toast('✅ Datos guardados en servidor correctamente');
-    renderAll();
-  } else {
-    toast('❌ Error al guardar. Comprueba conexion.');
-  }
-}
-
-async function syncNow(){
-  var modalAbierto=document.querySelector('.mbg.on');
-  if(modalAbierto){toast('Cierra el formulario antes de sincronizar');return;}
-  await cloudGet();
-  toast('Sincronizacion completada ✅');
+  if(name==='ajustes'){loadPerfil();renderSnaps();}
 }
 
 // ============================================================
@@ -865,15 +763,33 @@ function startApp(){
   SD.numNext         = SD_BASE.numNext;
   SD._ts             = 0;
 
-  // PASO 2 — Fusionar con backup local del dispositivo (nunca se pierde)
+  SD.borrados = [];
+
+  // PASO 2 — Fusionar con la copia local del dispositivo
   var backup = cargarBackupLocal();
-  if(backup && (backup.facturas||[]).length > 0){
+  if(backup && totalReg(contarSD(backup)) > 0){
     fusionarConSD(backup);
     SD._ts = backup.ts || 0;
-    console.log('Backup local aplicado: '+
-      (backup.facturas||[]).length+' facturas, '+
-      (backup.proveedores||[]).length+' proveedores');
+    console.log('Copia local aplicada: '+totalReg(contarSD(backup))+' registros');
   }
+
+  // PASO 2b — Red de seguridad: ultima foto conocida del servidor
+  try{
+    var ls = JSON.parse(localStorage.getItem(LAST_SRV_KEY)||'null');
+    if(ls && ls.datos && totalReg(contarSD(ls.datos)) > 0) fusionarConSD(ls.datos);
+  }catch(e){}
+
+  // PASO 2c — Si aun asi no hay nada, recuperar la copia mas completa
+  if(totalReg(contarSD(SD)) === 0){
+    var mejor = null;
+    leerSnaps().forEach(function(s){
+      if(!mejor || totalReg(s.conteo) > totalReg(mejor.conteo)) mejor = s;
+    });
+    if(mejor){ fusionarConSD(mejor.datos, true); toast('Datos recuperados de la copia local'); }
+  }
+
+  guardarBackupLocal();
+  crearSnapshot('arranque');
 
   // PASO 3 — Renderizar inmediatamente con lo que tenemos
   renderAll();
@@ -1270,214 +1186,340 @@ function logActividad(accion,tipo,detalle){if(!SD.actividad)SD.actividad=[];SD.a
 // NUMERACION FACTURAS
 // ============================================================
 // ============================================================
-// SYNC v4 — Read-Modify-Write OBLIGATORIO
-// Nunca se hace PUT sin antes hacer GET y fusionar
+// SYNC + COPIAS DE SEGURIDAD  v5
+// Reglas que nunca se rompen:
+//   1) Jamas se escribe en la nube sin leer antes (Read-Modify-Write)
+//   2) La fusion es ADITIVA: un registro solo desaparece si alguien
+//      lo borro de forma explicita (queda anotado en SD.borrados)
+//   3) Toda subida se VERIFICA releyendo el servidor
+//   4) Cada cambio deja una copia local recuperable (hasta 12)
 // ============================================================
 
-var BACKUP_KEY = 'autohr_backup_v3';
+var BACKUP_KEY   = 'autohr_backup_v3';    // copia en caliente (la ultima)
+var SNAP_KEY     = 'autohr_snaps_v1';     // historial de copias
+var LAST_SRV_KEY = 'autohr_last_server_v1';
+var SNAP_MAX     = 12;
+var hayCambiosSinSubir = false;
 
+// ── Recuentos ────────────────────────────────────────────────
+function contarSD(o){
+  o = o || {};
+  return {
+    f:  (o.facturas        || []).length,
+    p:  (o.proveedores     || []).length,
+    gf: (o.gastosFijos     || []).length,
+    gv: (o.gastosVariables || []).length
+  };
+}
+function totalReg(c){ return (c.f||0)+(c.p||0)+(c.gf||0)+(c.gv||0); }
+
+function paqueteSD(){
+  return {
+    ts:              Date.now(),
+    usuario:         USER || '?',
+    facturas:        SD.facturas,
+    proveedores:     SD.proveedores,
+    gastosFijos:     SD.gastosFijos,
+    gastosVariables: SD.gastosVariables,
+    borrados:        SD.borrados || [],
+    numNext:         SD.numNext,
+    actividad:       (SD.actividad || []).slice(0,100),
+    perfil:          SD.perfil
+  };
+}
+
+// ── Copia en caliente ────────────────────────────────────────
 function guardarBackupLocal(){
   try{
-    localStorage.setItem(BACKUP_KEY, JSON.stringify({
-      ts:          Date.now(),
-      facturas:    SD.facturas,
-      proveedores: SD.proveedores,
-      gastosFijos: SD.gastosFijos,
-      gastosVariables: SD.gastosVariables,
-      numNext:     SD.numNext,
-      actividad:   (SD.actividad||[]).slice(0,100),
-      perfil:      SD.perfil
-    }));
-  }catch(e){ console.log('guardarBackupLocal error:',e.message); }
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(paqueteSD()));
+  }catch(e){
+    podarSnaps(3);
+    try{ localStorage.setItem(BACKUP_KEY, JSON.stringify(paqueteSD())); }
+    catch(e2){ console.log('backup local error:', e2.message); }
+  }
 }
-
 function cargarBackupLocal(){
-  try{
-    var raw = localStorage.getItem(BACKUP_KEY);
-    return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
+  try{ var r = localStorage.getItem(BACKUP_KEY); return r ? JSON.parse(r) : null; }
+  catch(e){ return null; }
 }
 
-// Fusión aditiva pura — un registro nunca desaparece
-function fusionar(arr1, arr2){
+// ── Historial de copias ──────────────────────────────────────
+function leerSnaps(){
+  try{ var r = localStorage.getItem(SNAP_KEY); var a = r ? JSON.parse(r) : []; return Array.isArray(a)?a:[]; }
+  catch(e){ return []; }
+}
+function escribirSnaps(arr){
+  try{ localStorage.setItem(SNAP_KEY, JSON.stringify(arr)); return true; }
+  catch(e){
+    while(arr.length > 2){
+      arr.shift();
+      try{ localStorage.setItem(SNAP_KEY, JSON.stringify(arr)); return true; }catch(e2){}
+    }
+    return false;
+  }
+}
+function podarSnaps(dejar){
+  var a = leerSnaps();
+  escribirSnaps(a.slice(-(dejar||3)));
+}
+
+function crearSnapshot(motivo){
+  var c = contarSD(SD);
+  if(totalReg(c) === 0) return;                     // nunca guardar una copia vacia
+  var arr = leerSnaps();
+  var ult = arr[arr.length-1];
+  if(ult && ult.motivo === motivo && totalReg(ult.conteo) === totalReg(c) && (Date.now()-ult.ts) < 90000) return;
+  arr.push({ ts:Date.now(), usuario:USER||'?', motivo:motivo||'automatica', conteo:c, datos:paqueteSD() });
+  while(arr.length > SNAP_MAX) arr.shift();
+  escribirSnaps(arr);
+  try{ renderSnaps(); }catch(e){}
+}
+function crearSnapshotManual(){
+  crearSnapshot('manual');
+  toast('Copia de seguridad creada en este dispositivo');
+}
+
+// ── Registro de borrados (para que no reaparezcan al fusionar) ─
+function registrarBorrado(tipo, id, detalle){
+  if(!SD.borrados) SD.borrados = [];
+  SD.borrados.push({ id:id, tipo:tipo, ts:Date.now(), usuario:USER||'?', detalle:detalle||'' });
+  if(SD.borrados.length > 500) SD.borrados = SD.borrados.slice(-500);
+}
+function mapaBorrados(){
+  var m = {};
+  (SD.borrados||[]).forEach(function(b){
+    if(b && b.id){ if(!m[b.id] || b.ts > m[b.id]) m[b.id] = b.ts; }
+  });
+  return m;
+}
+
+// ── Fusion aditiva con respeto a los borrados ────────────────
+function fusionar(arr1, arr2, tomb){
   var mapa = {};
-  (arr1||[]).forEach(function(r){ if(r&&r.id) mapa[r.id]=r; });
+  (arr1||[]).forEach(function(r){ if(r && r.id) mapa[r.id] = r; });
   (arr2||[]).forEach(function(r){
-    if(!r||!r.id) return;
-    if(!mapa[r.id]){
-      mapa[r.id]=r;
-    } else {
-      var ts1=mapa[r.id].editadoTs||mapa[r.id].creadoTs||0;
-      var ts2=r.editadoTs||r.creadoTs||0;
-      if(ts2>ts1) mapa[r.id]=r;
+    if(!r || !r.id) return;
+    if(!mapa[r.id]){ mapa[r.id] = r; }
+    else{
+      var t1 = mapa[r.id].editadoTs || mapa[r.id].creadoTs || 0;
+      var t2 = r.editadoTs || r.creadoTs || 0;
+      if(t2 > t1) mapa[r.id] = r;
     }
   });
+  if(tomb){
+    Object.keys(tomb).forEach(function(id){
+      var r = mapa[id];
+      if(!r) return;
+      var tr = r.editadoTs || r.creadoTs || 0;
+      if(tomb[id] >= tr) delete mapa[id];   // el borrado es posterior al ultimo cambio
+    });
+  }
   return Object.values(mapa).sort(function(a,b){
-    return (b.fecha||'')>(a.fecha||'')?1:-1;
+    return (b.fecha||'') > (a.fecha||'') ? 1 : -1;
   });
 }
-function fusionarArray(a,b){ return fusionar(a,b); }
+function fusionarArray(a,b){ return fusionar(a,b,mapaBorrados()); }
 
-function fusionarConSD(fuente){
-  if(!fuente) return;
-  if(fuente.facturas&&fuente.facturas.length)
-    SD.facturas=fusionar(SD.facturas,fuente.facturas);
-  if(fuente.proveedores&&fuente.proveedores.length)
-    SD.proveedores=fusionar(SD.proveedores,fuente.proveedores);
-  if(fuente.gastosFijos&&fuente.gastosFijos.length)
-    SD.gastosFijos=fusionar(SD.gastosFijos,fuente.gastosFijos);
-  if(fuente.gastosVariables&&fuente.gastosVariables.length)
-    SD.gastosVariables=fusionar(SD.gastosVariables,fuente.gastosVariables);
-  if(fuente.numNext) SD.numNext=Math.max(SD.numNext||60,fuente.numNext);
-  if(fuente.perfil&&Object.keys(fuente.perfil).length)
-    SD.perfil=Object.assign({},SD.perfil,fuente.perfil);
-  if(fuente.actividad&&fuente.actividad.length){
-    var m={};
-    (SD.actividad||[]).forEach(function(a){m[a.ts+'_'+(a.usuario||'')]=a;});
-    (fuente.actividad||[]).forEach(function(a){m[a.ts+'_'+(a.usuario||'')]=a;});
-    SD.actividad=Object.values(m)
-      .sort(function(a,b){return(b.ts||'')>(a.ts||'')?1:-1;})
+function fusionarConSD(fuente, ignorarBorrados){
+  if(!fuente || typeof fuente !== 'object') return;
+
+  // 1) fusionar primero el registro de borrados (aditivo)
+  if(!ignorarBorrados && fuente.borrados && fuente.borrados.length){
+    var mb = {};
+    (SD.borrados||[]).concat(fuente.borrados).forEach(function(b){
+      if(b && b.id){ if(!mb[b.id] || b.ts > mb[b.id].ts) mb[b.id] = b; }
+    });
+    SD.borrados = Object.values(mb).sort(function(a,b){ return a.ts-b.ts; }).slice(-500);
+  }
+
+  var T = ignorarBorrados ? null : mapaBorrados();
+  SD.facturas        = fusionar(SD.facturas,        fuente.facturas,        T);
+  SD.proveedores     = fusionar(SD.proveedores,     fuente.proveedores,     T);
+  SD.gastosFijos     = fusionar(SD.gastosFijos,     fuente.gastosFijos,     T);
+  SD.gastosVariables = fusionar(SD.gastosVariables, fuente.gastosVariables, T);
+
+  if(fuente.numNext) SD.numNext = Math.max(SD.numNext||57, fuente.numNext);
+  if(fuente.perfil && Object.keys(fuente.perfil).length)
+    SD.perfil = Object.assign({}, SD.perfil, fuente.perfil);
+  if(fuente.actividad && fuente.actividad.length){
+    var m = {};
+    (SD.actividad||[]).forEach(function(a){ m[a.ts+'_'+(a.usuario||'')] = a; });
+    (fuente.actividad||[]).forEach(function(a){ m[a.ts+'_'+(a.usuario||'')] = a; });
+    SD.actividad = Object.values(m)
+      .sort(function(a,b){ return (b.ts||'') > (a.ts||'') ? 1 : -1; })
       .slice(0,100);
   }
 }
 
-// ── GET seguro desde JSONBin ──────────────────────────────────
+// ── GET seguro desde JSONBin ─────────────────────────────────
 async function jsonbinGet(){
   var r = await fetch(JBIN+BIN+'/latest',{
     method:'GET', mode:'cors', credentials:'omit',
-    headers:{
-      'X-Master-Key': KEY,
-      'X-Bin-Meta':   'false'
-    }
+    headers:{ 'X-Master-Key': KEY, 'X-Bin-Meta':'false' }
   });
-  if(!r.ok) throw new Error('GET '+r.status);
+  if(r.status===401||r.status===403) throw new Error('API Key incorrecta');
+  if(r.status===404)                 throw new Error('Bin ID incorrecto');
+  if(!r.ok)                          throw new Error('GET '+r.status);
   var d = await r.json();
-  // Validar que la respuesta tiene estructura correcta
-  if(!d || typeof d !== 'object') throw new Error('Respuesta invalida');
+  if(!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('Respuesta invalida del servidor');
   return d;
 }
 
-// ── PUT seguro a JSONBin ──────────────────────────────────────
+// ── PUT seguro a JSONBin ─────────────────────────────────────
 async function jsonbinPut(datos){
+  var c = contarSD(datos);
+  if(totalReg(c) === 0) throw new Error('Subida cancelada: el paquete estaba vacio');
   var r = await fetch(JBIN+BIN,{
     method:'PUT', mode:'cors', credentials:'omit',
-    headers:{
-      'Content-Type':      'application/json',
-      'X-Master-Key':      KEY,
-      'X-Bin-Versioning':  'false'
-    },
+    headers:{ 'Content-Type':'application/json', 'X-Master-Key':KEY, 'X-Bin-Versioning':'false' },
     body: JSON.stringify(datos)
   });
   if(!r.ok) throw new Error('PUT '+r.status);
   return await r.json();
 }
 
-// ── READ-MODIFY-WRITE: el único camino para guardar ──────────
-// Paso a: GET actual
-// Paso b: Validar
-// Paso c: Fusionar (merge)
-// Paso d: PUT resultado
-async function readModifyWrite(){
-  // Paso a+b: GET y validar
-  var servidorActual = null;
+// ── READ-MODIFY-WRITE: el unico camino para guardar ──────────
+async function readModifyWrite(motivo){
+  // a) leer servidor
+  var servidor = null;
   try{
-    servidorActual = await jsonbinGet();
+    servidor = await jsonbinGet();
   }catch(e){
-    console.log('GET fallido antes de PUT:',e.message);
-    // Si el GET falla, NO hacemos PUT (evitar sobreescribir con datos incompletos)
-    // Solo guardamos en backup local
     guardarBackupLocal();
-    throw new Error('No se pudo leer el servidor. Datos guardados en backup local.');
+    crearSnapshot('sin-conexion');
+    throw new Error('No se pudo leer el servidor ('+e.message+'). Tus datos siguen guardados en este dispositivo.');
   }
 
-  // Paso c: Fusionar datos del servidor con los locales actuales
-  // El servidor manda, pero los datos locales TAMBIÉN se preservan
-  if(servidorActual && servidorActual.facturas && servidorActual.facturas.length > 0){
-    fusionarConSD(servidorActual);
+  // b) guardar tal cual llego, antes de tocar nada
+  try{ localStorage.setItem(LAST_SRV_KEY, JSON.stringify({ ts:Date.now(), datos:servidor })); }catch(e){}
+  crearSnapshot(motivo || 'antes-de-subir');
+
+  // c) fusionar
+  fusionarConSD(servidor);
+
+  // d) GUARDIA ANTI-PERDIDA: el resultado nunca puede tener menos
+  //    registros que el servidor, descontando los borrados explicitos
+  var T = mapaBorrados();
+  var esperados = 0;
+  ['facturas','proveedores','gastosFijos','gastosVariables'].forEach(function(k){
+    esperados += (servidor[k]||[]).filter(function(r){ return r && r.id && !T[r.id]; }).length;
+  });
+  var ahora = totalReg(contarSD(SD));
+  if(ahora < esperados){
+    guardarBackupLocal();
+    crearSnapshot('bloqueo-anti-perdida');
+    throw new Error('Subida CANCELADA: el resultado tenia '+ahora+' registros y el servidor '+esperados+'. No se ha modificado nada en el servidor.');
   }
 
-  // Marcar timestamp y usuario
   SD._ts      = Date.now();
   SD._user    = USER;
   SD._savedAt = new Date().toISOString();
-
-  // Guardar backup local con datos ya fusionados
   guardarBackupLocal();
 
-  // Paso d: PUT con datos completos fusionados
+  // e) escribir
   await jsonbinPut(SD);
+
+  // f) VERIFICAR releyendo
+  var enviados = totalReg(contarSD(SD));
+  try{
+    var v = await jsonbinGet();
+    if(totalReg(contarSD(v)) < enviados){
+      await jsonbinPut(SD);                       // un reintento
+      var v2 = await jsonbinGet();
+      if(totalReg(contarSD(v2)) < enviados){
+        showUnsaved();
+        crearSnapshot('verificacion-fallida');
+        throw new Error('El servidor no confirmo todos los registros. Copia guardada en el movil: vuelve a pulsar "Forzar subida".');
+      }
+    }
+  }catch(e){
+    if(String(e.message).indexOf('no confirmo') >= 0) throw e;
+    console.log('verificacion post-subida:', e.message);
+  }
+  crearSnapshot('subida-ok');
 }
 
-// ── cloudPut: usa Read-Modify-Write siempre ──────────────────
+// ── cloudPut ─────────────────────────────────────────────────
 async function cloudPut(){
-  if(!BIN||!KEY) return false;
+  guardarBackupLocal();                 // primero al disco del movil, pase lo que pase
+  if(!BIN||!KEY){ showUnsaved(); return false; }
   setSyncStatus('sy');
   try{
-    await readModifyWrite();
-    lastSync=new Date();
+    await readModifyWrite('antes-de-guardar');
+    lastSync = new Date();
     setSyncStatus('ok');
-    g('slbl').textContent='Guardado ✓';
+    g('slbl').textContent = 'Guardado ✓';
     updateSyncLabel();
     hideUnsaved();
     return true;
   }catch(e){
     setSyncStatus('err');
-    g('slbl').textContent='Error guardando';
-    toast('⚠️ '+e.message);
+    g('slbl').textContent = 'Error guardando';
+    toast('⚠️ '+e.message, 5000);
     showUnsaved();
-    console.log('cloudPut error:',e.message);
+    console.log('cloudPut error:', e.message);
     return false;
   }
 }
 
-// ── cloudGet: solo descarga y fusiona, nunca sobreescribe ─────
+// ── cloudGet: descarga y fusiona, nunca sobreescribe ─────────
 async function cloudGet(){
   if(!BIN||!KEY) return;
-  if(document.querySelector('.mbg.on')) return;
+  if(document.querySelector('.mbg.on')) return;    // no tocar nada con un formulario abierto
   setSyncStatus('sy');
   try{
     var d = await jsonbinGet();
-    if(d && d.facturas && d.facturas.length > 0){
-      // Fusionar servidor con local — aditivo
+    var trae = totalReg(contarSD(d));
+
+    if(trae > 0){
+      try{ localStorage.setItem(LAST_SRV_KEY, JSON.stringify({ ts:Date.now(), datos:d })); }catch(e){}
+      var antes = totalReg(contarSD(SD));
       fusionarConSD(d);
       guardarBackupLocal();
-      // Si local es más nuevo, subir (usando Read-Modify-Write)
+      if(totalReg(contarSD(SD)) !== antes) crearSnapshot('tras-sincronizar');
+
+      // si lo nuestro es mas nuevo, subirlo con Read-Modify-Write
       if((SD._ts||0) > (d._ts||0)){
-        await readModifyWrite();
-      } else {
-        SD._ts = d._ts||SD._ts;
+        await readModifyWrite('local-mas-nuevo');
+      }else{
+        SD._ts = d._ts || SD._ts;
       }
-    } else {
-      // Servidor vacío: subir local con Read-Modify-Write
-      await readModifyWrite();
-      toast('Servidor vacio — datos subidos ✅');
+    }else{
+      // servidor vacio: subir lo local (nunca al reves)
+      await readModifyWrite('servidor-vacio');
+      toast('Servidor vacio — datos del movil subidos ✅');
     }
-    lastSync=new Date();
+
+    lastSync = new Date();
     setSyncStatus('ok');
-    g('slbl').textContent='Sincronizado';
+    g('slbl').textContent = 'Sincronizado';
     updateSyncLabel();
     hideUnsaved();
     renderAll();
   }catch(e){
     setSyncStatus('err');
-    g('slbl').textContent='Sin conexion';
-    console.log('cloudGet error:',e.message);
-    renderAll();
+    g('slbl').textContent = 'Sin conexion';
+    console.log('cloudGet error:', e.message);
+    renderAll();                                    // los datos locales siempre se ven
   }
 }
 
-// ── Forzar subida: Read-Modify-Write explícito ───────────────
+// ── Forzar subida ────────────────────────────────────────────
 async function forzarSubida(){
+  guardarBackupLocal();
   if(!BIN||!KEY){ toast('Configura JSONBin primero'); return; }
   toast('Leyendo servidor y fusionando...');
   setSyncStatus('sy');
   try{
-    await readModifyWrite();
-    toast('✅ Datos fusionados y guardados en servidor');
+    await readModifyWrite('forzar-subida');
+    setSyncStatus('ok');
+    hideUnsaved();
+    toast('✅ Datos fusionados, subidos y verificados');
     renderAll();
   }catch(e){
-    toast('❌ '+e.message);
+    toast('❌ '+e.message, 6000);
     setSyncStatus('err');
+    showUnsaved();
   }
 }
 
@@ -1489,6 +1531,109 @@ async function syncNow(){
   await cloudGet();
   toast('Sincronizacion completada ✅');
 }
+
+// ============================================================
+// RESTAURACION DE COPIAS
+// ============================================================
+function fmtFechaTs(ts){
+  var d = new Date(ts);
+  var p = function(n){ return n.toString().padStart(2,'0'); };
+  return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+
+var MOTIVO_TXT = {
+  'manual':'Copia manual',
+  'arranque':'Al abrir la app',
+  'antes-de-guardar':'Antes de guardar',
+  'antes-de-subir':'Antes de subir',
+  'forzar-subida':'Forzar subida',
+  'subida-ok':'Subida confirmada',
+  'tras-sincronizar':'Tras sincronizar',
+  'sin-conexion':'Sin conexion',
+  'local-mas-nuevo':'Local mas nuevo',
+  'servidor-vacio':'Servidor vacio',
+  'bloqueo-anti-perdida':'⚠️ Bloqueo anti-perdida',
+  'verificacion-fallida':'⚠️ Verificacion fallida',
+  'antes-de-restaurar':'Antes de restaurar',
+  'importada':'Archivo importado'
+};
+
+function renderSnaps(){
+  var cont = g('snaps-lista');
+  if(!cont) return;
+  var arr = leerSnaps().slice().reverse();
+  if(!arr.length){
+    cont.innerHTML = '<div style="font-size:12px;color:var(--t4);padding:10px 2px">Aun no hay copias guardadas en este dispositivo.</div>';
+    return;
+  }
+  cont.innerHTML = arr.map(function(s){
+    var c = s.conteo || {};
+    return '<div class="card" style="padding:10px 12px;margin-bottom:7px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+      +   '<div style="min-width:0">'
+      +     '<div style="font-size:13px;font-weight:700">'+fmtFechaTs(s.ts)+' · '+escH(s.usuario||'?')+'</div>'
+      +     '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+escH(MOTIVO_TXT[s.motivo]||s.motivo||'')+'</div>'
+      +     '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(c.f||0)+' facturas · '+(c.p||0)+' compras · '+((c.gf||0)+(c.gv||0))+' gastos</div>'
+      +   '</div>'
+      +   '<button class="btn bs bsm" style="width:auto;padding:7px 12px;margin:0;flex-shrink:0" onclick="restaurarSnap('+s.ts+')">Restaurar</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function restaurarSnap(ts){
+  var s = leerSnaps().filter(function(x){ return x.ts === ts; })[0];
+  if(!s){ toast('Copia no encontrada'); return; }
+  var c = s.conteo || {};
+  if(!confirm('Restaurar la copia del '+fmtFechaTs(s.ts)+'?\n\n'
+    + (c.f||0)+' facturas, '+(c.p||0)+' compras, '+((c.gf||0)+(c.gv||0))+' gastos.\n\n'
+    + 'La restauracion es ADITIVA: recupera lo que falte y no borra nada de lo que tengas ahora.')) return;
+
+  crearSnapshot('antes-de-restaurar');
+  fusionarConSD(s.datos, true);          // ignorar borrados: el usuario quiere recuperar
+  guardarBackupLocal();
+  renderAll();
+  toast('Copia restaurada en el movil. Subiendo al servidor...');
+  await cloudPut();
+}
+
+function descargarCopia(){
+  try{
+    var blob = new Blob([JSON.stringify(paqueteSD(), null, 2)], {type:'application/json'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    var d    = new Date();
+    var p    = function(n){ return n.toString().padStart(2,'0'); };
+    a.href = url;
+    a.download = 'autohr_copia_'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    toast('Copia descargada');
+  }catch(e){ toast('No se pudo descargar: '+e.message); }
+}
+
+function importarCopia(input){
+  var file = input.files && input.files[0];
+  if(!file) return;
+  var rd = new FileReader();
+  rd.onload = async function(){
+    try{
+      var d = JSON.parse(rd.result);
+      var c = contarSD(d);
+      if(totalReg(c) === 0){ toast('El archivo no contiene registros'); input.value=''; return; }
+      if(!confirm('Importar '+(c.f||0)+' facturas, '+(c.p||0)+' compras y '+((c.gf||0)+(c.gv||0))+' gastos?\n\nSe fusiona con lo que ya tienes: no se borra nada.')){ input.value=''; return; }
+      crearSnapshot('antes-de-restaurar');
+      fusionarConSD(d, true);
+      guardarBackupLocal();
+      crearSnapshot('importada');
+      renderAll();
+      toast('Archivo importado. Subiendo al servidor...');
+      await cloudPut();
+    }catch(e){ toast('Archivo no valido: '+e.message); }
+    input.value = '';
+  };
+  rd.readAsText(file);
+}
+
 // ============================================================
 function getNextNumSeq(){
   // Calcular el máximo secuencial usado en todas las facturas
@@ -1700,11 +1845,12 @@ async function saveFact(){
     }
   }
   logActividad(eid?'editar':'crear','factura',(obj.cliente||'-')+' '+eur(obj.total)+' | Num: '+(numFinal||'albaran'));
+  guardarBackupLocal();
   closeFact();toast(eid?'Factura actualizada por '+USER:'Factura creada por '+USER);renderFacts();
   var ok=await cloudPut();
   if(!ok)showUnsaved();
 }
-async function delFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(!f||!confirm('Eliminar factura de '+(f.cliente||'este cliente')+'?'))return;logActividad('eliminar','factura',(f.cliente||'-')+' '+eur(f.total));SD.facturas=SD.facturas.filter(function(x){return x.id!==id;});toast('Eliminado por '+USER);renderFacts();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function delFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(!f||!confirm('Eliminar factura de '+(f.cliente||'este cliente')+'?'))return;logActividad('eliminar','factura',(f.cliente||'-')+' '+eur(f.total));registrarBorrado('factura',id,(f.cliente||'-'));SD.facturas=SD.facturas.filter(function(x){return x.id!==id;});guardarBackupLocal();toast('Eliminado por '+USER);renderFacts();var ok=await cloudPut();if(!ok)showUnsaved();}
 
 // ============================================================
 // PROVEEDOR CRUD
@@ -1713,8 +1859,8 @@ function calcP(){var b=parseFloat(g('mp-base').value)||0;var iv=Math.round(b*21)
 function openProv(){g('mp-tit').textContent='Nueva Compra Proveedor';g('mp-id').value='';var dw2=g('mp-dup-warn');if(dw2)dw2.style.display='none';var sb2=g('mp-save-btn');if(sb2){sb2.style.background='var(--blue)';sb2.textContent='Guardar';}g('mp-fecha').value=new Date().toISOString().slice(0,10);g('mp-num').value='';g('mp-prov').value='';g('mp-base').value='';g('mp-iva').value='';g('mp-tot').value='';g('mp-conc').value='';g('mp-est').value='Pagado';g('mp-mes').value=curPT;g('mp').classList.add('on');}
 function closeProv(){g('mp').classList.remove('on');}
 function editProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('mp-tit').textContent='Editar Factura Proveedor';g('mp-id').value=id;g('mp-mes').value=p.mes||curPT;g('mp-fecha').value=p.fecha||'';g('mp-num').value=p.num||'';g('mp-prov').value=p.proveedor||'';g('mp-base').value=p.base||'';g('mp-iva').value=p.iva||'';g('mp-tot').value=p.total||'';g('mp-conc').value=p.concepto||'';g('mp-est').value=p.estado||'Pagado';g('mp').classList.add('on');}
-async function saveProv(){var base=parseFloat(g('mp-base').value);if(isNaN(base)){toast('Introduce la base imponible');return;}var iva=Math.round(base*2100)/100/100;var eidP=g('mp-id').value;var existenteP=eidP?SD.proveedores.find(function(x){return x.id===eidP;}):null;  var obj={id:eidP||uid(),mes:g('mp-mes').value,fecha:g('mp-fecha').value,num:g('mp-num').value,proveedor:g('mp-prov').value,base:base,iva:iva,total:base+iva,concepto:g('mp-conc').value,estado:g('mp-est').value,creadoPor:existenteP?(existenteP.creadoPor||USER):USER,creadoTs:existenteP?(existenteP.creadoTs||Date.now()):Date.now(),editadoPor:eidP?USER:null,editadoTs:eidP?Date.now():null};if(eidP){var i=SD.proveedores.findIndex(function(x){return x.id===eidP;});if(i>=0)SD.proveedores[i]=obj;}else{SD.proveedores.push(obj);}logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));closeProv();toast(eidP?'Actualizado por '+USER:'Guardado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
-async function delProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p||!confirm('Eliminar factura de '+p.proveedor+'?'))return;logActividad('eliminar','proveedor',(p.proveedor||'-')+' '+eur(p.total));SD.proveedores=SD.proveedores.filter(function(x){return x.id!==id;});toast('Eliminado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function saveProv(){var base=parseFloat(g('mp-base').value);if(isNaN(base)){toast('Introduce la base imponible');return;}var iva=Math.round(base*2100)/100/100;var eidP=g('mp-id').value;var existenteP=eidP?SD.proveedores.find(function(x){return x.id===eidP;}):null;  var obj={id:eidP||uid(),mes:g('mp-mes').value,fecha:g('mp-fecha').value,num:g('mp-num').value,proveedor:g('mp-prov').value,base:base,iva:iva,total:base+iva,concepto:g('mp-conc').value,estado:g('mp-est').value,creadoPor:existenteP?(existenteP.creadoPor||USER):USER,creadoTs:existenteP?(existenteP.creadoTs||Date.now()):Date.now(),editadoPor:eidP?USER:null,editadoTs:eidP?Date.now():null};if(eidP){var i=SD.proveedores.findIndex(function(x){return x.id===eidP;});if(i>=0)SD.proveedores[i]=obj;}else{SD.proveedores.push(obj);}logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));guardarBackupLocal();closeProv();toast(eidP?'Actualizado por '+USER:'Guardado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function delProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p||!confirm('Eliminar factura de '+p.proveedor+'?'))return;logActividad('eliminar','proveedor',(p.proveedor||'-')+' '+eur(p.total));registrarBorrado('proveedor',id,(p.proveedor||'-'));SD.proveedores=SD.proveedores.filter(function(x){return x.id!==id;});guardarBackupLocal();toast('Eliminado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
 
 // ============================================================
 // GASTO FIJO CRUD
@@ -1722,8 +1868,8 @@ async function delProv(id){var p=SD.proveedores.find(function(x){return x.id===i
 function openGF(){g('mgf-tit').textContent='Nuevo Gasto Fijo';g('gf-id').value='';g('gf-conc').value='';g('gf-per').value='Mensual';g('gf-imp').value='';g('gf-nota').value='';g('mgf').classList.add('on');}
 function closeGF(){g('mgf').classList.remove('on');}
 function editGF(id){var gf=SD.gastosFijos.find(function(x){return x.id===id;});if(!gf)return;g('mgf-tit').textContent='Editar Gasto Fijo';g('gf-id').value=id;g('gf-conc').value=gf.concepto||'';g('gf-per').value=gf.period||'Mensual';g('gf-imp').value=gf.importe||'';g('gf-nota').value=gf.notas||'';g('mgf').classList.add('on');}
-async function saveGF(){var imp=parseFloat(g('gf-imp').value)||0;var per=g('gf-per').value;var impM=per==='Bimestral'?imp/2:per==='Trimestral'?imp/3:per==='Anual'?imp/12:imp;var eidGF=g('gf-id').value;var obj={id:eidGF||uid(),concepto:g('gf-conc').value,period:per,importe:imp,importe_mes:impM,notas:g('gf-nota').value,editadoPor:USER,editadoEn:nowStr()};var eid=g('gf-id').value;if(eid){var i=SD.gastosFijos.findIndex(function(x){return x.id===eid;});if(i>=0)SD.gastosFijos[i]=obj;}else{SD.gastosFijos.push(obj);}logActividad(eidGF?'editar':'crear','gasto_fijo',obj.concepto+' '+eur(obj.importe_mes)+'/mes');closeGF();toast((eidGF?'Actualizado':'Anadido')+' por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
-async function delGF(id){if(!confirm('Eliminar este gasto fijo?'))return;var gfDel=SD.gastosFijos.find(function(x){return x.id===id;});if(gfDel)logActividad('eliminar','gasto_fijo',gfDel.concepto);SD.gastosFijos=SD.gastosFijos.filter(function(x){return x.id!==id;});toast('Eliminado por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function saveGF(){var imp=parseFloat(g('gf-imp').value)||0;var per=g('gf-per').value;var impM=per==='Bimestral'?imp/2:per==='Trimestral'?imp/3:per==='Anual'?imp/12:imp;var eidGF=g('gf-id').value;var obj={id:eidGF||uid(),concepto:g('gf-conc').value,period:per,importe:imp,importe_mes:impM,notas:g('gf-nota').value,editadoPor:USER,editadoEn:nowStr()};var eid=g('gf-id').value;if(eid){var i=SD.gastosFijos.findIndex(function(x){return x.id===eid;});if(i>=0)SD.gastosFijos[i]=obj;}else{SD.gastosFijos.push(obj);}logActividad(eidGF?'editar':'crear','gasto_fijo',obj.concepto+' '+eur(obj.importe_mes)+'/mes');guardarBackupLocal();closeGF();toast((eidGF?'Actualizado':'Anadido')+' por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function delGF(id){if(!confirm('Eliminar este gasto fijo?'))return;var gfDel=SD.gastosFijos.find(function(x){return x.id===id;});if(gfDel)logActividad('eliminar','gasto_fijo',gfDel.concepto);registrarBorrado('gasto_fijo',id,(gfDel&&gfDel.concepto)||'');SD.gastosFijos=SD.gastosFijos.filter(function(x){return x.id!==id;});guardarBackupLocal();toast('Eliminado por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
 
 // ============================================================
 // GASTO VARIABLE CRUD
@@ -1731,8 +1877,8 @@ async function delGF(id){if(!confirm('Eliminar este gasto fijo?'))return;var gfD
 function openGV(){g('mgv-tit').textContent='Nuevo Gasto Variable';g('gv-id').value='';g('gv-fecha').value=new Date().toISOString().slice(0,10);g('gv-num').value='';g('gv-prov').value='';g('gv-conc').value='';g('gv-imp').value='';g('gv-pago').value='Transferencia';g('gv-mes').value=curGVT;g('mgv').classList.add('on');}
 function closeGV(){g('mgv').classList.remove('on');}
 function editGV(id){var gv=SD.gastosVariables.find(function(x){return x.id===id;});if(!gv)return;g('mgv-tit').textContent='Editar Gasto Variable';g('gv-id').value=id;g('gv-mes').value=gv.mes||curGVT;g('gv-fecha').value=gv.fecha||'';g('gv-num').value=gv.num||'';g('gv-prov').value=gv.prov||'';g('gv-conc').value=gv.concepto||'';g('gv-imp').value=gv.importe||'';g('gv-pago').value=gv.pago||'Transferencia';g('mgv').classList.add('on');}
-async function saveGV(){var imp=parseFloat(g('gv-imp').value)||0;var eidGV=g('gv-id').value;var obj={id:eidGV||uid(),mes:g('gv-mes').value,fecha:g('gv-fecha').value,num:g('gv-num').value,prov:g('gv-prov').value,concepto:g('gv-conc').value,importe:imp,pago:g('gv-pago').value,editadoPor:USER,editadoEn:nowStr()};if(eidGV){var i=SD.gastosVariables.findIndex(function(x){return x.id===eidGV;});if(i>=0)SD.gastosVariables[i]=obj;}else{SD.gastosVariables.push(obj);}logActividad(eidGV?'editar':'crear','gasto_variable',(obj.prov||'-')+' '+eur(obj.importe));closeGV();toast((eidGV?'Actualizado':'Anadido')+' por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
-async function delGV(id){if(!confirm('Eliminar este gasto?'))return;var gvDel=SD.gastosVariables.find(function(x){return x.id===id;});if(gvDel)logActividad('eliminar','gasto_variable',(gvDel.prov||'-')+' '+eur(gvDel.importe));SD.gastosVariables=SD.gastosVariables.filter(function(x){return x.id!==id;});toast('Eliminado por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function saveGV(){var imp=parseFloat(g('gv-imp').value)||0;var eidGV=g('gv-id').value;var obj={id:eidGV||uid(),mes:g('gv-mes').value,fecha:g('gv-fecha').value,num:g('gv-num').value,prov:g('gv-prov').value,concepto:g('gv-conc').value,importe:imp,pago:g('gv-pago').value,editadoPor:USER,editadoEn:nowStr()};if(eidGV){var i=SD.gastosVariables.findIndex(function(x){return x.id===eidGV;});if(i>=0)SD.gastosVariables[i]=obj;}else{SD.gastosVariables.push(obj);}logActividad(eidGV?'editar':'crear','gasto_variable',(obj.prov||'-')+' '+eur(obj.importe));guardarBackupLocal();closeGV();toast((eidGV?'Actualizado':'Anadido')+' por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
+async function delGV(id){if(!confirm('Eliminar este gasto?'))return;var gvDel=SD.gastosVariables.find(function(x){return x.id===id;});if(gvDel)logActividad('eliminar','gasto_variable',(gvDel.prov||'-')+' '+eur(gvDel.importe));registrarBorrado('gasto_variable',id,(gvDel&&gvDel.prov)||'');SD.gastosVariables=SD.gastosVariables.filter(function(x){return x.id!==id;});guardarBackupLocal();toast('Eliminado por '+USER);renderGastos();var ok=await cloudPut();if(!ok)showUnsaved();}
 
 // ============================================================
 // PRINT / VIEW
