@@ -209,7 +209,7 @@ textarea{resize:vertical;min-height:60px}
 <div class="content">
 
   <div class="sec on" id="sec-inicio">
-    <div class="lbl">Resumen mensual - Abril 2026</div>
+    <div class="lbl" id="dash-lbl">Resumen mensual</div>
     <div class="metrics" id="dash-m"></div>
     <div class="card" id="dash-acum"></div>
     <div class="lbl">Alertas</div>
@@ -293,6 +293,8 @@ textarea{resize:vertical;min-height:60px}
   </div>
 
   <div class="sec" id="sec-fiscal">
+    <div class="lbl">Ejercicio fiscal</div>
+    <div class="tabs" id="fis-anios" style="margin-bottom:12px"></div>
     <div class="lbl">Modelo 303 - IVA Trimestral</div>
     <div id="iva-cards"></div>
     <div class="lbl">Modelo 130 - IRPF Pago Fraccionado</div>
@@ -433,18 +435,21 @@ textarea{resize:vertical;min-height:60px}
     <div class="stit" id="mp-tit">Nueva Compra Proveedor</div>
     <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:6px">Cargar desde PDF</div>
-      <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Sube la factura del proveedor y relleno los datos automaticamente</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Sube la factura del proveedor y relleno los datos. La lectura se hace en el movil: el PDF no sale de aqui.</div>
       <input type="file" id="pdf-prov-input" accept=".pdf,application/pdf" style="display:none" onchange="leerPDFProveedor(this)">
       <button class="btn bp bsm" style="width:100%" onclick="g('pdf-prov-input').click()">Seleccionar PDF de factura</button>
       <div id="pdf-prov-status" style="font-size:11px;margin-top:6px;color:var(--t3)"></div>
+      <div id="pdf-prov-detalle" style="display:none;font-size:11px;margin-top:6px;color:var(--t3)"></div>
+      <button class="btn bs bsm" id="pdf-prov-ver" style="display:none;width:100%;margin-top:6px" onclick="togglePDFTexto()">Ver texto leido del PDF</button>
+      <pre id="pdf-prov-texto" style="display:none;max-height:180px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:10px;white-space:pre-wrap;margin:6px 0 0"></pre>
     </div>
     <div class="fg"><label class="fl">Mes</label><select id="mp-mes"></select></div>
     <div class="g2">
-      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mp-fecha"></div>
+      <div class="fg"><label class="fl">Fecha</label><input type="date" id="mp-fecha" onchange="previewVenc()"></div>
       <div class="fg"><label class="fl">N Factura Prov.</label><input type="text" id="mp-num" placeholder="FAB26..." oninput="checkDupProv()"></div>
     </div>
     <div class="fg"><label class="fl">Proveedor</label>
-      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner..." oninput="checkDupProv()">
+      <input type="text" id="mp-prov" list="prov-dl" placeholder="Adbosch, Berner..." oninput="checkDupProv();previewVenc()">
       <datalist id="prov-dl"><option value="Adbosch"><option value="Berner"><option value="Otro"></datalist>
     </div>
     <div class="fg"><label class="fl">Base Imponible (sin IVA)</label><input type="number" id="mp-base" step="0.01" placeholder="0.00" oninput="calcP();checkDupProv()"></div>
@@ -453,6 +458,11 @@ textarea{resize:vertical;min-height:60px}
       <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mp-tot" step="0.01" readonly placeholder="Auto"></div>
     </div>
     <div class="fg"><label class="fl">Concepto</label><textarea id="mp-conc" placeholder="Descripcion de la compra..."></textarea></div>
+    <div class="fg">
+      <label class="fl">Vencimiento (opcional)</label>
+      <input type="date" id="mp-venc" onchange="previewVenc()">
+      <div id="mp-venc-hint" style="font-size:11px;color:var(--t3);margin-top:5px"></div>
+    </div>
     <div class="fg"><label class="fl">Estado</label><select id="mp-est"><option value="Pagado">Pagado</option><option value="Pendiente">Pendiente</option></select></div>
     <div id="mp-dup-warn" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:#78350f"></div>
     <input type="hidden" id="mp-id">
@@ -519,12 +529,71 @@ textarea{resize:vertical;min-height:60px}
 // ============================================================
 // CONSTANTS & STATE
 // ============================================================
-var MESES_I = ['Sep-25','Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
-var MESES_C = ['Sep-25','Oct-25','Nov-25','Dic-25','Ene-26','Feb-26','Mar-26','Abr-26','May-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26','Dic-26'];
-var ML = {'Sep-25':'Septiembre 2025','Oct-25':'Octubre 2025','Nov-25':'Noviembre 2025','Dic-25':'Diciembre 2025','Ene-26':'Enero 2026','Feb-26':'Febrero 2026','Mar-26':'Marzo 2026','Abr-26':'Abril 2026','May-26':'Mayo 2026','Jun-26':'Junio 2026','Jul-26':'Julio 2026','Ago-26':'Agosto 2026','Sep-26':'Septiembre 2026','Oct-26':'Octubre 2026','Nov-26':'Noviembre 2026','Dic-26':'Diciembre 2026'};
+// ── Calendario dinamico ──────────────────────────────────────
+// La app ya no depende de una lista fija de meses. Se generan
+// desde la apertura del taller hasta 12 meses por delante del
+// mes actual, cada vez que se abre. Asi nunca "se acaba".
+var MES_ABR    = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+var MES_LARGO  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var APERTURA   = {anio:2025, mes:8};   // septiembre de 2025 (mes 0 = enero)
+var MESES_FUTUROS = 12;
+
+function claveMes(anio, mes){ return MES_ABR[mes] + '-' + String(anio).slice(-2); }
+function etiquetaMes(anio, mes){ return MES_LARGO[mes] + ' ' + anio; }
+
+// 'Abr-26' -> {anio:2026, mes:3}
+function descomponerMes(clave){
+  if(!clave) return null;
+  var pr = String(clave).split('-');
+  var mi = MES_ABR.indexOf(pr[0]);
+  if(mi < 0 || !pr[1]) return null;
+  var yy = parseInt(pr[1], 10);
+  if(isNaN(yy)) return null;
+  return { anio: yy < 100 ? 2000+yy : yy, mes: mi };
+}
+function anioDeMes(clave){ var d = descomponerMes(clave); return d ? d.anio : null; }
+function trimestreDeMes(clave){ var d = descomponerMes(clave); return d ? Math.floor(d.mes/3)+1 : null; }
+function mesActualClave(){ var n = new Date(); return claveMes(n.getFullYear(), n.getMonth()); }
+
+var MESES_I = [], MESES_C = [], ML = {};
+
+function construirCalendario(){
+  var n = new Date();
+  var finA = n.getFullYear(), finM = n.getMonth() + MESES_FUTUROS;
+  finA += Math.floor(finM/12); finM = ((finM % 12) + 12) % 12;
+
+  // Si hay registros anteriores a la apertura configurada, se incluyen igual
+  var iniA = APERTURA.anio, iniM = APERTURA.mes;
+  [].concat(SD.facturas||[], SD.proveedores||[], SD.gastosVariables||[]).forEach(function(r){
+    var d = descomponerMes(r && r.mes);
+    if(d && (d.anio < iniA || (d.anio === iniA && d.mes < iniM))){ iniA = d.anio; iniM = d.mes; }
+  });
+
+  var lista = [], a = iniA, m = iniM, tope = 0;
+  while((a < finA || (a === finA && m <= finM)) && tope++ < 600){
+    lista.push(claveMes(a, m));
+    ML[claveMes(a, m)] = etiquetaMes(a, m);
+    m++; if(m > 11){ m = 0; a++; }
+  }
+  MESES_I = lista;
+  MESES_C = lista;
+  return lista;
+}
+
+// Años con actividad, del mas reciente al mas antiguo
+function aniosConDatos(){
+  var s = {};
+  [].concat(SD.facturas||[], SD.proveedores||[], SD.gastosVariables||[]).forEach(function(r){
+    var a = anioDeMes(r && r.mes); if(a) s[a] = true;
+  });
+  s[new Date().getFullYear()] = true;
+  return Object.keys(s).map(Number).sort(function(x,y){ return y-x; });
+}
 var JBIN = 'https://api.jsonbin.io/v3/b/';
 var BIN = '', KEY = '', USER = '', lastSync = null;
-var curFT = 'Abr-26', curPT = 'Sep-25', curGVT = 'Ene-26', curTET = 'Abr-26';
+var curFT = '', curPT = '', curGVT = '', curTET = '';
+var anioFiscal = new Date().getFullYear();
+var anioFiscalElegido = false;   // pasa a true cuando el usuario toca el selector
 
 var SD = {
   _ts: 0,
@@ -802,7 +871,9 @@ function startApp(){
     if(!document.hidden && BIN && !document.querySelector('.mbg.on')){
       cloudGet();
     }
-  }, 60000);
+  }, 300000);   // cada 5 minutos: JSONBin regala 10.000 peticiones
+                // UNA sola vez y no se renuevan. Cada 60 s se agotaban
+                // en pocas semanas.
 }
 
 function logout(){
@@ -838,6 +909,14 @@ function renderAll(){
 // INIT TABS
 // ============================================================
 function initTabs(){
+  construirCalendario();
+  // Si el mes seleccionado no existe (primera carga o cambio de año),
+  // situarse en el mes actual, o en el ultimo disponible.
+  var hoyM = mesActualClave();
+  var pordefecto = MESES_I.indexOf(hoyM) >= 0 ? hoyM : MESES_I[MESES_I.length-1];
+  ['curFT','curPT','curGVT','curTET'].forEach(function(v){
+    if(!window[v] || MESES_I.indexOf(window[v]) < 0) window[v] = pordefecto;
+  });
   var ftEl=g('ft');ftEl.innerHTML='';
   MESES_I.forEach(function(m){var b=document.createElement('button');b.className='tab'+(m===curFT?' on':'');b.textContent=m;b.onclick=function(){setFT(m);};ftEl.appendChild(b);});
   var ptEl=g('pt');ptEl.innerHTML='';
@@ -867,7 +946,10 @@ function mkSumCard(leftTxt,rightTxt,chips){return'<div class="card" style="paddi
 // DASHBOARD
 // ============================================================
 function renderDash(){
-  var mAct='Abr-26';
+  var mAct = (MESES_I.indexOf(mesActualClave())>=0) ? mesActualClave() : curFT;
+  var dAct = descomponerMes(mAct) || {anio:new Date().getFullYear(), mes:new Date().getMonth()};
+  var nomMes = MES_LARGO[dAct.mes];
+  var lblSec = g('dash-lbl'); if(lblSec) lblSec.textContent = 'Resumen mensual - ' + nomMes + ' ' + dAct.anio;
   var fM=SD.facturas.filter(function(f){return f.mes===mAct;});
   var pM=SD.proveedores.filter(function(p){return p.mes===mAct;});
   var gvM=SD.gastosVariables.filter(function(g){return g.mes===mAct;});
@@ -876,16 +958,18 @@ function renderDash(){
   var comp=pM.reduce(function(a,p){return a+Number(p.base||0);},0);
   var gvT=gvM.reduce(function(a,x){return a+Number(x.importe||0);},0);
   var res=ing-gfTot-comp-gvT;
-  var meses26=['Ene-26','Feb-26','Mar-26','Abr-26'];
+  // Acumulado del año natural en curso, de enero al mes actual
+  var meses26=[]; for(var mm=0; mm<=dAct.mes; mm++) meses26.push(claveMes(dAct.anio, mm));
+  var nMesesAcum = meses26.length;
   var ing26=meses26.reduce(function(a,m){return a+SD.facturas.filter(function(f){return f.mes===m&&f.estado==='Cobrado';}).reduce(function(s,f){return s+Number(f.base||0);},0);},0);
   var comp26=meses26.reduce(function(a,m){return a+SD.proveedores.filter(function(p){return p.mes===m;}).reduce(function(s,p){return s+Number(p.base||0);},0);},0);
   var pend=SD.facturas.filter(function(f){return f.estado==='Pendiente';}).length;
-  g('dash-m').innerHTML=mkMetric(eur(ing),'Ingresos Abril 2026',ing>=0?'var(--green)':'var(--red)')+mkMetric(eur(gfTot+comp+gvT),'Gastos totales Abril','var(--orange)')+mkMetric(eur(res),'Resultado Abril',res>=0?'var(--green)':'var(--red)')+mkMetric(pend,'Facturas pendientes','var(--blue)');
-  var acumRes=ing26-comp26-gfTot*4;
+  g('dash-m').innerHTML=mkMetric(eur(ing),'Ingresos '+nomMes+' '+dAct.anio,ing>=0?'var(--green)':'var(--red)')+mkMetric(eur(gfTot+comp+gvT),'Gastos totales '+nomMes,'var(--orange)')+mkMetric(eur(res),'Resultado '+nomMes,res>=0?'var(--green)':'var(--red)')+mkMetric(pend,'Facturas pendientes','var(--blue)');
+  var acumRes=ing26-comp26-gfTot*nMesesAcum;
   var acumColor=acumRes>=0?'var(--green)':'var(--red)';var acumBg=acumRes>=0?'#dcfce7':'#fee2e2';
-  g('dash-acum').innerHTML='<div class="lbl" style="margin-top:0">Resultado acumulado 2026</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px"><div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Ingresos</div><div style="font-size:15px;font-weight:700;color:var(--green)">'+eur(ing26)+'</div></div><div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Compras</div><div style="font-size:15px;font-weight:700;color:var(--orange)">'+eur(comp26)+'</div></div><div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Gtos fijos</div><div style="font-size:15px;font-weight:700;color:var(--t2)">'+eur(gfTot*4)+'</div></div></div><div style="padding:10px;background:'+acumBg+';border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--t3)">Ene-Abr 2026</div><div style="font-size:20px;font-weight:800;color:'+acumColor+'">'+eur(acumRes)+'</div></div>';
+  g('dash-acum').innerHTML='<div class="lbl" style="margin-top:0">Resultado acumulado '+dAct.anio+'</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px"><div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Ingresos</div><div style="font-size:15px;font-weight:700;color:var(--green)">'+eur(ing26)+'</div></div><div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Compras</div><div style="font-size:15px;font-weight:700;color:var(--orange)">'+eur(comp26)+'</div></div><div style="text-align:center"><div style="font-size:12px;color:var(--t3)">Gtos fijos</div><div style="font-size:15px;font-weight:700;color:var(--t2)">'+eur(gfTot*nMesesAcum)+'</div></div></div><div style="padding:10px;background:'+acumBg+';border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--t3)">Ene-'+MES_ABR[dAct.mes]+' '+dAct.anio+'</div><div style="font-size:20px;font-weight:800;color:'+acumColor+'">'+eur(acumRes)+'</div></div>';
   var alts=[];
-  if(res<0)alts.push(mkAlert('Resultado negativo en Abril: '+eur(res),'r'));
+  if(res<0)alts.push(mkAlert('Resultado negativo en '+nomMes+': '+eur(res),'r'));
   var pF=SD.facturas.filter(function(f){return f.estado==='Pendiente';});
   var pP=SD.proveedores.filter(function(p){return p.estado==='Pendiente';});
   if(pF.length)alts.push(mkAlert(pF.length+' factura(s) de ingreso pendiente(s) de cobro','y'));
@@ -982,8 +1066,7 @@ function renderProvs(){
         var vencColor=diasRestantes<0?'var(--red)':diasRestantes<=7?'var(--orange)':'var(--green)';
         var vencBg=diasRestantes<0?'#fee2e2':diasRestantes<=7?'#fef3c7':'#dcfce7';
         var vencTxt=diasRestantes<0?'Vencida hace '+Math.abs(diasRestantes)+'d':diasRestantes===0?'Vence hoy':'Vence en '+diasRestantes+'d';
-        var prov=(p.proveedor||'').toLowerCase();
-        var regla=prov.indexOf('adbosch')>=0?'Adbosch: día 10 del mes M+2':'Berner: +30 días';
+        var regla=venc.regla||'';
         vencHTML='<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 9px;background:'+vencBg+';border-radius:8px">'
           +'<span style="font-size:14px">'+(diasRestantes<0?'🔴':diasRestantes<=7?'🟠':'🟢')+'</span>'
           +'<div><div style="font-size:11px;font-weight:700;color:'+vencColor+'">📅 Vence: '+venc.fecha+' — '+vencTxt+'</div>'
@@ -1039,21 +1122,43 @@ function renderGastos(){
 // ============================================================
 // TESORERIA
 // ============================================================
+// Convierte 'YYYY-MM-DD' en una fecha LOCAL (sin saltos de zona horaria)
+function parseFechaLocal(s){
+  if(!s) return null;
+  var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function fechaVencimiento(p){
   var nombres=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var prov=(p.proveedor||'').toLowerCase();
-  if(prov.indexOf('adbosch')>=0){
-    // Adbosch: día 10 del mes M+2
-    var d=new Date(p.fecha||'');if(isNaN(d.getTime()))return null;
-    d.setMonth(d.getMonth()+2);d.setDate(10);
-    return {fecha:'10/'+nombres[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2), ts:d.getTime()};
-  }else{
-    // Berner y otros: +30 días desde fecha factura
-    var d2=new Date(p.fecha||'');if(isNaN(d2.getTime()))return null;
-    d2.setDate(d2.getDate()+30);
-    var dd=d2.getDate().toString().padStart(2,'0');
-    return {fecha:dd+'/'+nombres[d2.getMonth()]+'-'+String(d2.getFullYear()).slice(-2), ts:d2.getTime()};
+  function fmt(d, regla){
+    return {
+      fecha: String(d.getDate()).padStart(2,'0')+'/'+nombres[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2),
+      ts:    d.getTime(),
+      regla: regla
+    };
   }
+
+  // 1) Vencimiento fijado a mano: manda por encima de cualquier regla
+  if(p.venc){
+    var pm = parseFechaLocal(p.venc);
+    if(pm) return fmt(pm, 'Vencimiento fijado a mano');
+  }
+
+  var f = parseFechaLocal(p.fecha);
+  if(!f) return null;
+  var prov = (p.proveedor||'').toLowerCase();
+
+  if(prov.indexOf('adbosch') >= 0){
+    // Adbosch: dia 10 del mes M+2.
+    // Se construye la fecha de golpe (año, mes+2, 10) para que un dia 29,
+    // 30 o 31 no desborde al mes siguiente.
+    return fmt(new Date(f.getFullYear(), f.getMonth()+2, 10), 'Adbosch: dia 10 del mes M+2');
+  }
+  // Berner y el resto: +30 dias desde la fecha de factura
+  return fmt(new Date(f.getFullYear(), f.getMonth(), f.getDate()+30), 'Berner y otros: +30 dias');
 }
 
 function mesDeVencimiento(p){
@@ -1090,14 +1195,15 @@ function renderTesoreria(){
   var gfMes=SD.gastosFijos.reduce(function(a,x){return a+Number(x.importe_mes||0);},0);
   var gvMes=SD.gastosVariables.filter(function(x){return x.mes===m;}).reduce(function(a,x){return a+Number(x.importe||0);},0);
   var ivaNeto=ivaRepercutido-ivaSoportado;
-  var trimMap={'Ene-26':1,'Feb-26':1,'Mar-26':1,'Abr-26':2,'May-26':2,'Jun-26':2,'Jul-26':3,'Ago-26':3,'Sep-26':3,'Oct-26':4,'Nov-26':4,'Dic-26':4};
-  var qMeses={'1':['Ene-26','Feb-26','Mar-26'],'2':['Abr-26','May-26','Jun-26'],'3':['Jul-26','Ago-26','Sep-26'],'4':['Oct-26','Nov-26','Dic-26']};
-  var qNum=trimMap[m];var qMs=qMeses[qNum]||[m];
+  // El trimestre se deduce del propio mes: sirve para cualquier año
+  var dM=descomponerMes(m);
+  var qNum=dM?Math.floor(dM.mes/3)+1:1;
+  var qMs=dM?[0,1,2].map(function(k){return claveMes(dM.anio,(qNum-1)*3+k);}):[m];
   var qIng=qMs.reduce(function(a,qm){return a+SD.facturas.filter(function(f){return f.mes===qm&&f.estado==='Cobrado';}).reduce(function(s,f){return s+Number(f.base||0);},0);},0);
   var qComp=qMs.reduce(function(a,qm){return a+SD.proveedores.filter(function(p){return p.mes===qm;}).reduce(function(s,p){return s+Number(p.base||0);},0);},0);
   var qGv=qMs.reduce(function(a,qm){return a+SD.gastosVariables.filter(function(x){return x.mes===qm;}).reduce(function(s,x){return s+Number(x.importe||0);},0);},0);
   var qRnd=qIng-qComp-qGv-gfMes*3;var irpfQ=qRnd>0?qRnd*0.20:0;
-  var esMesFinQ=(m==='Mar-26'||m==='Jun-26'||m==='Sep-26'||m==='Dic-26');
+  var esMesFinQ=!!dM&&(dM.mes%3===2);   // marzo, junio, septiembre o diciembre
   var minimoMes=pagarProvs+gfMes+gvMes;
   var minimoConImpuestos=minimoMes+(esMesFinQ?irpfQ+Math.max(ivaNeto,0):0);
   var margenSeg=minimoConImpuestos*0.15;var minimoRecomendado=minimoConImpuestos+margenSeg;
@@ -1153,7 +1259,35 @@ function renderTesoreria(){
 // FISCAL
 // ============================================================
 function renderFiscal(){
-  var QQ=[{key:'Q1',lbl:'Q1 2026 - Ene-Mar',meses:['Ene-26','Feb-26','Mar-26'],plazo:'< 20 Abr 2026'},{key:'Q2',lbl:'Q2 2026 - Abr-Jun',meses:['Abr-26','May-26','Jun-26'],plazo:'< 20 Jul 2026'},{key:'Q3',lbl:'Q3 2026 - Jul-Sep',meses:['Jul-26','Ago-26','Sep-26'],plazo:'< 20 Oct 2026'},{key:'Q4',lbl:'Q4 2026 - Oct-Dic',meses:['Oct-26','Nov-26','Dic-26'],plazo:'< 30 Ene 2027'}];
+  // Trimestres y plazos calculados para el ejercicio elegido:
+  // sirve igual para 2025, 2026, 2030...
+  // Mientras el usuario no elija ejercicio a mano, se muestra el año en curso.
+  // Asi, al cambiar de año, la pestana Fiscal se pone sola en el nuevo ejercicio.
+  if(!anioFiscalElegido) anioFiscal = new Date().getFullYear();
+  var A = anioFiscal;
+  var plazos = ['< 20 Abr '+A, '< 20 Jul '+A, '< 20 Oct '+A, '< 30 Ene '+(A+1)];
+  var rangos = ['Ene-Mar','Abr-Jun','Jul-Sep','Oct-Dic'];
+  var QQ = [0,1,2,3].map(function(q){
+    return {
+      key:'Q'+(q+1),
+      lbl:'Q'+(q+1)+' '+A+' - '+rangos[q],
+      meses:[0,1,2].map(function(k){ return claveMes(A, q*3+k); }),
+      plazo:plazos[q]
+    };
+  });
+
+  // Botones de ejercicio
+  var cont = g('fis-anios');
+  if(cont){
+    cont.innerHTML = '';
+    aniosConDatos().forEach(function(a){
+      var b = document.createElement('button');
+      b.className = 'tab' + (a === anioFiscal ? ' on' : '');
+      b.textContent = a;
+      b.onclick = function(){ anioFiscal = a; anioFiscalElegido = true; renderFiscal(); };
+      cont.appendChild(b);
+    });
+  }
   var gfMes=SD.gastosFijos.reduce(function(a,x){return a+Number(x.importe_mes||0);},0);
   g('iva-cards').innerHTML=QQ.map(function(q){
     var ivaR=q.meses.reduce(function(a,m){return a+SD.facturas.filter(function(f){return f.mes===m&&f.estado==='Cobrado';}).reduce(function(s,f){return s+Number(f.iva||0);},0);},0);
@@ -1170,10 +1304,10 @@ function renderFiscal(){
     return'<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:13px;font-weight:700">'+q.lbl+'</div><div style="font-size:11px;color:var(--t3)">'+q.plazo+'</div></div>'+mkChip(cuotaLbl,cuotaCls)+'</div><div style="font-size:12px;color:var(--t2)"><div style="display:flex;justify-content:space-between;padding:3px 0"><span>Ingresos cobrados</span><b>'+eur(ing)+'</b></div><div style="display:flex;justify-content:space-between;padding:3px 0"><span>Gastos deducibles</span><b style="color:var(--red)">-'+eur(comp+gv+gfQ)+'</b></div><div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);margin-top:3px"><span>Rdto. neto</span><b style="color:'+rndColor+'">'+eur(rnd)+'</b></div><div style="display:flex;justify-content:space-between;padding:3px 0"><span><b>Casilla 20 (20%)</b></span><b style="font-size:15px;color:var(--blue)">'+eur(cuota)+'</b></div></div></div>';
   }).join('');
   var THR=3005.06;var clients={},suppliers={};
-  SD.facturas.forEach(function(f){if(f.mes&&f.mes.endsWith('-26')&&f.cliente&&f.cliente!=='Particular'&&f.cliente!=='Varios')clients[f.cliente]=(clients[f.cliente]||0)+Number(f.base||0);});
-  SD.proveedores.forEach(function(p){if(p.mes&&p.mes.endsWith('-26')&&p.proveedor)suppliers[p.proveedor]=(suppliers[p.proveedor]||0)+Number(p.base||0);});
+  SD.facturas.forEach(function(f){if(anioDeMes(f.mes)===anioFiscal&&f.cliente&&f.cliente!=='Particular'&&f.cliente!=='Varios')clients[f.cliente]=(clients[f.cliente]||0)+Number(f.base||0);});
+  SD.proveedores.forEach(function(p){if(anioDeMes(p.mes)===anioFiscal&&p.proveedor)suppliers[p.proveedor]=(suppliers[p.proveedor]||0)+Number(p.base||0);});
   function mk347rows(obj){return Object.entries(obj).sort(function(a,b){return b[1]-a[1];}).map(function(e){var cls=e[1]>=THR?'cr':'cg';var lbl=e[1]>=THR?'M347':'OK';return'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+escH(e[0])+'</span><span style="font-weight:600">'+eur(e[1])+' '+mkChip(lbl,cls)+'</span></div>';}).join('')||'<div style="font-size:12px;color:var(--t4)">Sin datos</div>';}
-  g('m347-cards').innerHTML='<div class="card"><div style="font-size:12px;color:var(--t3);margin-bottom:10px">Umbral: 3.005,06 EUR (base, sin IVA)</div><div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Clientes 2026</div>'+mk347rows(clients)+'<div style="font-size:12px;font-weight:600;color:var(--t2);margin:10px 0 5px">Proveedores 2026</div>'+mk347rows(suppliers)+'</div>';
+  g('m347-cards').innerHTML='<div class="card"><div style="font-size:12px;color:var(--t3);margin-bottom:10px">Umbral: 3.005,06 EUR (base, sin IVA)</div><div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px">Clientes '+anioFiscal+'</div>'+mk347rows(clients)+'<div style="font-size:12px;font-weight:600;color:var(--t2);margin:10px 0 5px">Proveedores '+anioFiscal+'</div>'+mk347rows(suppliers)+'</div>';
 }
 
 // ============================================================
@@ -1856,10 +1990,25 @@ async function delFact(id){var f=SD.facturas.find(function(x){return x.id===id;}
 // PROVEEDOR CRUD
 // ============================================================
 function calcP(){var b=parseFloat(g('mp-base').value)||0;var iv=Math.round(b*21)/100;g('mp-iva').value=iv.toFixed(2);g('mp-tot').value=(b+iv).toFixed(2);}
-function openProv(){g('mp-tit').textContent='Nueva Compra Proveedor';g('mp-id').value='';var dw2=g('mp-dup-warn');if(dw2)dw2.style.display='none';var sb2=g('mp-save-btn');if(sb2){sb2.style.background='var(--blue)';sb2.textContent='Guardar';}g('mp-fecha').value=new Date().toISOString().slice(0,10);g('mp-num').value='';g('mp-prov').value='';g('mp-base').value='';g('mp-iva').value='';g('mp-tot').value='';g('mp-conc').value='';g('mp-est').value='Pagado';g('mp-mes').value=curPT;g('mp').classList.add('on');}
+function openProv(){g('mp-tit').textContent='Nueva Compra Proveedor';g('mp-id').value='';var dw2=g('mp-dup-warn');if(dw2)dw2.style.display='none';var sb2=g('mp-save-btn');if(sb2){sb2.style.background='var(--blue)';sb2.textContent='Guardar';}g('mp-fecha').value=new Date().toISOString().slice(0,10);g('mp-num').value='';g('mp-prov').value='';g('mp-base').value='';g('mp-iva').value='';g('mp-tot').value='';g('mp-conc').value='';g('mp-venc').value='';g('mp-est').value='Pagado';g('mp-mes').value=curPT;g('mp').classList.add('on');previewVenc();}
 function closeProv(){g('mp').classList.remove('on');}
-function editProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('mp-tit').textContent='Editar Factura Proveedor';g('mp-id').value=id;g('mp-mes').value=p.mes||curPT;g('mp-fecha').value=p.fecha||'';g('mp-num').value=p.num||'';g('mp-prov').value=p.proveedor||'';g('mp-base').value=p.base||'';g('mp-iva').value=p.iva||'';g('mp-tot').value=p.total||'';g('mp-conc').value=p.concepto||'';g('mp-est').value=p.estado||'Pagado';g('mp').classList.add('on');}
-async function saveProv(){var base=parseFloat(g('mp-base').value);if(isNaN(base)){toast('Introduce la base imponible');return;}var iva=Math.round(base*2100)/100/100;var eidP=g('mp-id').value;var existenteP=eidP?SD.proveedores.find(function(x){return x.id===eidP;}):null;  var obj={id:eidP||uid(),mes:g('mp-mes').value,fecha:g('mp-fecha').value,num:g('mp-num').value,proveedor:g('mp-prov').value,base:base,iva:iva,total:base+iva,concepto:g('mp-conc').value,estado:g('mp-est').value,creadoPor:existenteP?(existenteP.creadoPor||USER):USER,creadoTs:existenteP?(existenteP.creadoTs||Date.now()):Date.now(),editadoPor:eidP?USER:null,editadoTs:eidP?Date.now():null};if(eidP){var i=SD.proveedores.findIndex(function(x){return x.id===eidP;});if(i>=0)SD.proveedores[i]=obj;}else{SD.proveedores.push(obj);}logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));guardarBackupLocal();closeProv();toast(eidP?'Actualizado por '+USER:'Guardado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
+
+// Muestra que vencimiento se aplicara: el manual o el de la regla
+function previewVenc(){
+  var hint=g('mp-venc-hint'); if(!hint) return;
+  var manual=(g('mp-venc')&&g('mp-venc').value)||'';
+  var calc=fechaVencimiento({proveedor:g('mp-prov')?g('mp-prov').value:'', fecha:g('mp-fecha')?g('mp-fecha').value:'', venc:manual});
+  if(!calc){ hint.textContent='Deja el campo vacio para calcularlo con la regla del proveedor.'; hint.style.color='var(--t3)'; return; }
+  if(manual){
+    hint.textContent='Vence el '+calc.fecha+' (fijado a mano). Borra el campo para volver a la regla automatica.';
+    hint.style.color='var(--blue)';
+  }else{
+    hint.textContent='Automatico: vence el '+calc.fecha+'. '+calc.regla;
+    hint.style.color='var(--t3)';
+  }
+}
+function editProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('mp-tit').textContent='Editar Factura Proveedor';g('mp-id').value=id;g('mp-mes').value=p.mes||curPT;g('mp-fecha').value=p.fecha||'';g('mp-num').value=p.num||'';g('mp-prov').value=p.proveedor||'';g('mp-base').value=p.base||'';g('mp-iva').value=p.iva||'';g('mp-tot').value=p.total||'';g('mp-conc').value=p.concepto||'';g('mp-venc').value=p.venc||'';g('mp-est').value=p.estado||'Pagado';g('mp').classList.add('on');previewVenc();}
+async function saveProv(){var base=parseFloat(g('mp-base').value);if(isNaN(base)){toast('Introduce la base imponible');return;}var iva=Math.round(base*2100)/100/100;var eidP=g('mp-id').value;var existenteP=eidP?SD.proveedores.find(function(x){return x.id===eidP;}):null;  var obj={id:eidP||uid(),mes:g('mp-mes').value,fecha:g('mp-fecha').value,num:g('mp-num').value,proveedor:g('mp-prov').value,base:base,iva:iva,total:base+iva,concepto:g('mp-conc').value,venc:(g('mp-venc').value||''),estado:g('mp-est').value,creadoPor:existenteP?(existenteP.creadoPor||USER):USER,creadoTs:existenteP?(existenteP.creadoTs||Date.now()):Date.now(),editadoPor:eidP?USER:null,editadoTs:eidP?Date.now():null};if(eidP){var i=SD.proveedores.findIndex(function(x){return x.id===eidP;});if(i>=0)SD.proveedores[i]=obj;}else{SD.proveedores.push(obj);}logActividad(eidP?'editar':'crear','proveedor',(obj.proveedor||'-')+' '+eur(obj.total));guardarBackupLocal();closeProv();toast(eidP?'Actualizado por '+USER:'Guardado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
 async function delProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p||!confirm('Eliminar factura de '+p.proveedor+'?'))return;logActividad('eliminar','proveedor',(p.proveedor||'-')+' '+eur(p.total));registrarBorrado('proveedor',id,(p.proveedor||'-'));SD.proveedores=SD.proveedores.filter(function(x){return x.id!==id;});guardarBackupLocal();toast('Eliminado por '+USER);renderProvs();var ok=await cloudPut();if(!ok)showUnsaved();}
 
 // ============================================================
@@ -2051,119 +2200,270 @@ async function testConexion(){
   catch(e){var m=e.message||'';if(m.includes('Load failed')||m.includes('Failed to fetch')){toast('ERROR red: JSONBin bloqueado. Prueba en Safari.');}else{toast('ERROR: '+m);}}
 }
 
-function leerPDFProveedor(input){
-  var file=input.files[0];if(!file)return;
-  var status=g('pdf-prov-status');
-  status.textContent='Leyendo PDF...';status.style.color='var(--blue)';
+// ============================================================
+// LECTURA DE FACTURAS EN PDF  (100% en el movil, sin servicios externos)
+//
+// La version anterior llamaba a la API de Anthropic sin clave de API,
+// asi que siempre devolvia 401 y nunca funciono. Ademas, meter una clave
+// en este archivo seria peligroso: la pagina es publica en GitHub y
+// cualquiera con la URL podria usarla y cobrartelo a ti.
+//
+// Ahora se extrae el texto del PDF con pdf.js dentro del propio movil
+// y se interpretan los campos con reglas. Ni el PDF ni sus datos salen
+// del dispositivo.
+// ============================================================
 
-  // Validar que es PDF
-  if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){
-    status.textContent='Error: el archivo no es un PDF válido.';
-    status.style.color='var(--red)';return;
-  }
-  // Validar tamaño (máx 5MB)
-  if(file.size>5*1024*1024){
-    status.textContent='Error: el PDF es demasiado grande (máx 5MB).';
-    status.style.color='var(--red)';return;
-  }
+var PDFJS_SRC    = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+var PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var _pdfTextoUltimo = '';
 
-  var reader=new FileReader();
-  reader.onerror=function(){
-    status.textContent='Error al leer el archivo. Inténtalo de nuevo.';
-    status.style.color='var(--red)';
-  };
-  reader.onload=function(e){
-    var base64=e.result.split(',')[1];
-    if(!base64){status.textContent='Error al procesar el PDF.';status.style.color='var(--red)';return;}
-    status.textContent='Analizando factura con IA...';status.style.color='var(--blue)';
-
-    var payload={
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:500,
-      messages:[{
-        role:'user',
-        content:[
-          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-          {type:'text',text:'Extrae de esta factura de proveedor SOLO este JSON sin texto extra ni markdown:\n{"proveedor":"","num_factura":"","fecha":"YYYY-MM-DD","base_imponible":0,"iva":0,"total":0,"concepto":""}'}
-        ]
-      }]
+function cargarPdfJs(){
+  return new Promise(function(res, rej){
+    if(window.pdfjsLib){ res(window.pdfjsLib); return; }
+    var s = document.createElement('script');
+    s.src = PDFJS_SRC;
+    s.onload = function(){
+      if(!window.pdfjsLib){ rej(new Error('El lector de PDF no se cargo bien')); return; }
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      res(window.pdfjsLib);
     };
+    s.onerror = function(){ rej(new Error('No se pudo descargar el lector de PDF (revisa la conexion)')); };
+    document.head.appendChild(s);
+  });
+}
 
-    // Intentar con proxy CORS primero, luego directo
-    var urls=[
-      'https://corsproxy.io/?url='+encodeURIComponent('https://api.anthropic.com/v1/messages'),
-      'https://api.anthropic.com/v1/messages'
-    ];
-    var intentoIdx=0;
-
-    function intentar(){
-      if(intentoIdx>=urls.length){
-        status.textContent='No se pudo conectar con la IA. Rellena los datos manualmente.';
-        status.style.color='var(--orange)';
-        return;
-      }
-      var url=urls[intentoIdx++];
-      fetch(url,{
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'anthropic-version':'2023-06-01',
-          'anthropic-dangerous-direct-browser-access':'true'
-        },
-        body:JSON.stringify(payload)
-      })
-      .then(function(r){
-        if(!r.ok)throw new Error('HTTP '+r.status);
-        return r.json();
-      })
-      .then(function(data){
-        var texto='';
-        if(data.content&&data.content[0]&&data.content[0].text){
-          texto=data.content[0].text;
-        }else if(data.error){
-          throw new Error(data.error.message||'Error IA');
-        }
-        // Extraer JSON de la respuesta
-        var start=texto.indexOf('{');
-        var end=texto.lastIndexOf('}');
-        if(start<0||end<0)throw new Error('No se encontraron datos en la factura');
-        var info=JSON.parse(texto.slice(start,end+1));
-
-        // Rellenar campos del formulario
-        var cambios=0;
-        if(info.proveedor){var el=g('mp-prov');if(el){el.value=info.proveedor;cambios++;}}
-        if(info.num_factura){var el=g('mp-num');if(el){el.value=info.num_factura;cambios++;}}
-        if(info.fecha){var el=g('mp-fecha');if(el){el.value=info.fecha;cambios++;
-          // Detectar mes automáticamente
-          var d=new Date(info.fecha);
-          var nm=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-          var ms=nm[d.getMonth()]+'-'+String(d.getFullYear()).slice(-2);
-          var sel=g('mp-mes');
-          if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===ms){sel.value=ms;break;}}}
-        }}
-        if(info.base_imponible&&info.base_imponible!==0){
-          var el=g('mp-base');if(el){el.value=Number(info.base_imponible).toFixed(2);calcP();cambios++;}
-        }
-        if(info.concepto){var el=g('mp-conc');if(el){el.value=info.concepto;cambios++;}}
-
-        if(cambios>0){
-          status.textContent='✅ '+cambios+' campo(s) rellenados automáticamente. Revisa y confirma.';
-          status.style.color='var(--green)';
-        }else{
-          status.textContent='⚠️ PDF procesado pero no se encontraron datos. Rellena manualmente.';
-          status.style.color='var(--orange)';
-        }
-        checkDupProv();
-      })
-      .catch(function(err){
-        console.log('Intento '+(intentoIdx)+' fallido:',err.message);
-        // Reintentar con siguiente URL
-        intentar();
+// Extrae el texto respetando las lineas y el orden de izquierda a derecha
+async function textoDePDF(file){
+  var lib = await cargarPdfJs();
+  var buf = await file.arrayBuffer();
+  var doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise;
+  var salida = [];
+  var maxPag = Math.min(doc.numPages, 6);
+  for(var i=1; i<=maxPag; i++){
+    var pag = await doc.getPage(i);
+    var tc  = await pag.getTextContent();
+    var filas = {};
+    tc.items.forEach(function(it){
+      if(!it.transform) return;
+      var y = Math.round(it.transform[5]);
+      if(!filas[y]) filas[y] = [];
+      filas[y].push({ x: it.transform[4], s: it.str });
+    });
+    Object.keys(filas)
+      .map(Number)
+      .sort(function(a,b){ return b-a; })
+      .forEach(function(y){
+        var linea = filas[y].sort(function(a,b){ return a.x-b.x; })
+          .map(function(o){ return o.s; }).join(' ')
+          .replace(/\s+/g,' ').trim();
+        if(linea) salida.push(linea);
       });
+  }
+  return salida.join('\n');
+}
+
+// Convierte "1.234,56" o "1,234.56" o "1234.56" en numero
+function numEs(s){
+  if(s === null || s === undefined) return NaN;
+  var t = String(s).replace(/[^\d.,-]/g, '').trim();
+  if(!t) return NaN;
+  var coma = t.lastIndexOf(','), punto = t.lastIndexOf('.');
+  if(coma > punto)      t = t.replace(/\./g,'').replace(',', '.');
+  else if(punto > coma) t = t.replace(/,/g,'');
+  else                  t = t.replace(',', '.');
+  var v = parseFloat(t);
+  return isNaN(v) ? NaN : v;
+}
+
+// Ultimo importe que aparece en una linea
+function importeDeLinea(linea){
+  var m = String(linea).match(/-?\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d{1,2})|-?\d+[.,]\d{1,2}|-?\d+/g);
+  if(!m || !m.length) return NaN;
+  for(var i=m.length-1; i>=0; i--){
+    var v = numEs(m[i]);
+    if(!isNaN(v)) return v;
+  }
+  return NaN;
+}
+
+function buscarLinea(lineas, patron, excluir){
+  for(var i=0; i<lineas.length; i++){
+    var l = lineas[i];
+    if(!patron.test(l)) continue;
+    if(excluir && excluir.test(l)) continue;
+    return { linea: l, idx: i };
+  }
+  return null;
+}
+
+// Busca un importe en la linea que casa; si no lo trae, mira las 2 siguientes
+function importeCerca(lineas, patron, excluir){
+  var hit = buscarLinea(lineas, patron, excluir);
+  if(!hit) return NaN;
+  var v = importeDeLinea(hit.linea.replace(patron, ' '));
+  if(!isNaN(v)) return v;
+  for(var k=1; k<=2 && hit.idx+k < lineas.length; k++){
+    v = importeDeLinea(lineas[hit.idx+k]);
+    if(!isNaN(v)) return v;
+  }
+  return NaN;
+}
+
+function fechaDeTexto(texto){
+  var lineas = texto.split('\n');
+  var pref = lineas.filter(function(l){ return /fecha|data|emisi/i.test(l); });
+  var fuentes = pref.concat([texto]);
+  for(var i=0; i<fuentes.length; i++){
+    var m = fuentes[i].match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if(m){
+      var d = +m[1], mes = +m[2], a = +m[3];
+      if(a < 100) a += 2000;
+      if(d >= 1 && d <= 31 && mes >= 1 && mes <= 12)
+        return a + '-' + String(mes).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     }
-    intentar();
-  };
-  reader.readAsDataURL(file);
+    var m2 = fuentes[i].match(/(\d{4})-(\d{2})-(\d{2})/);
+    if(m2) return m2[0];
+  }
+  return '';
+}
+
+function analizarFacturaPDF(texto){
+  var lineas = texto.split('\n').filter(function(l){ return l.trim(); });
+  var plano  = texto.replace(/\s+/g,' ');
+  var bajo   = plano.toLowerCase();
+  var r = { proveedor:'', num:'', fecha:'', base:NaN, iva:NaN, total:NaN, concepto:'' };
+
+  // ── Proveedor ──
+  if(bajo.indexOf('adbosch') >= 0)      r.proveedor = 'Adbosch';
+  else if(bajo.indexOf('berner') >= 0)  r.proveedor = 'Berner';
+  else{
+    for(var i=0; i<Math.min(lineas.length,6); i++){
+      var c = lineas[i].trim();
+      if(c.length >= 3 && c.length <= 45 && !/factura|invoice|fecha|n[ºo°]|www|@/i.test(c)){ r.proveedor = c; break; }
+    }
+  }
+
+  // ── Numero de factura ──
+  var mFab = plano.match(/\bFAB\s?\d{6,}\b/i);                       // formato Adbosch
+  if(mFab) r.num = mFab[0].replace(/\s/g,'').toUpperCase();
+  if(!r.num){
+    var mEtq = plano.match(/(?:factura|fra\.?|invoice|n[ºo°]\s*factura)\s*(?:n[ºo°]\.?|num\.?|number|n\.)?\s*[:.\-]?\s*([A-Z0-9][A-Z0-9\/\-]{4,20})/i);
+    if(mEtq) r.num = mEtq[1].toUpperCase();
+  }
+  if(!r.num){
+    var mGen = plano.match(/\b[A-Z]{2,4}\d{6,}\b/);
+    if(mGen) r.num = mGen[0];
+  }
+
+  // ── Fecha ──
+  r.fecha = fechaDeTexto(texto);
+
+  // ── Importes ──
+  r.base  = importeCerca(lineas, /base\s*imponible|base\s*imp|subtotal|base\b/i);
+  r.iva   = importeCerca(lineas, /i\.?v\.?a\.?|impuesto/i, /base/i);
+  r.total = importeCerca(lineas, /total\s*factura|total\s*a\s*pagar|importe\s*total|^total\b|\btotal\b/i, /base|subtotal/i);
+
+  // ── Coherencia entre base, IVA y total ──
+  if(isNaN(r.base) && !isNaN(r.total)) r.base = Math.round((r.total/1.21)*100)/100;
+  if(isNaN(r.total) && !isNaN(r.base)) r.total = Math.round((r.base*1.21)*100)/100;
+  if(!isNaN(r.base) && !isNaN(r.total)){
+    // Si lo detectado como "base" es en realidad el total con IVA, corregirlo
+    if(Math.abs(r.base - r.total) < 0.02 && !isNaN(r.iva) && r.iva > 0){
+      r.base = Math.round((r.total - r.iva)*100)/100;
+    }
+    var esperado = Math.round(r.base*1.21*100)/100;
+    r.aviso = Math.abs(esperado - r.total) > Math.max(0.05, r.total*0.02);
+  }
+
+  r.concepto = 'Compra material' + (r.proveedor ? ' ' + r.proveedor : '');
+  return r;
+}
+
+function togglePDFTexto(){
+  var pre = g('pdf-prov-texto'), btn = g('pdf-prov-ver');
+  if(!pre) return;
+  var abierto = pre.style.display !== 'none';
+  pre.style.display = abierto ? 'none' : 'block';
+  if(btn) btn.textContent = abierto ? 'Ver texto leido del PDF' : 'Ocultar texto';
+  pre.textContent = _pdfTextoUltimo || '(vacio)';
+}
+
+async function leerPDFProveedor(input){
+  var file = input.files && input.files[0];
+  var st   = g('pdf-prov-status');
+  var det  = g('pdf-prov-detalle');
+  var btnV = g('pdf-prov-ver');
+  var pre  = g('pdf-prov-texto');
+  if(det){ det.style.display='none'; det.innerHTML=''; }
+  if(btnV) btnV.style.display='none';
+  if(pre){ pre.style.display='none'; pre.textContent=''; }
+  if(!file) return;
+
+  function err(msg){ st.textContent = msg; st.style.color = 'var(--red)'; input.value=''; }
+
+  if(file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) return err('El archivo no es un PDF.');
+  if(file.size > 15*1024*1024)                                       return err('El PDF es demasiado grande (maximo 15 MB).');
+
+  st.textContent = 'Leyendo el PDF...';
+  st.style.color = 'var(--blue)';
+
+  var texto = '';
+  try{
+    texto = await textoDePDF(file);
+  }catch(e){
+    return err('No se pudo leer el PDF: ' + e.message);
+  }
+  _pdfTextoUltimo = texto;
+  if(btnV) btnV.style.display = 'block';
+
+  if(texto.replace(/\s/g,'').length < 25){
+    st.textContent = 'Este PDF es una imagen escaneada y no lleva texto dentro. Rellena los datos a mano.';
+    st.style.color = 'var(--orange)';
+    input.value = '';
+    return;
+  }
+
+  var d = analizarFacturaPDF(texto);
+  var puestos = [];
+
+  if(d.proveedor && g('mp-prov')){ g('mp-prov').value = d.proveedor; puestos.push('proveedor'); }
+  if(d.num       && g('mp-num')) { g('mp-num').value  = d.num;       puestos.push('n&ordm; factura'); }
+  if(d.fecha     && g('mp-fecha')){
+    g('mp-fecha').value = d.fecha;
+    puestos.push('fecha');
+    var fl = parseFechaLocal(d.fecha);
+    if(fl){
+      var nm = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      var ms = nm[fl.getMonth()] + '-' + String(fl.getFullYear()).slice(-2);
+      var sel = g('mp-mes');
+      if(sel) for(var i=0; i<sel.options.length; i++){ if(sel.options[i].value === ms){ sel.value = ms; puestos.push('mes'); break; } }
+    }
+  }
+  if(!isNaN(d.base) && g('mp-base')){ g('mp-base').value = d.base.toFixed(2); calcP(); puestos.push('base imponible'); }
+  if(d.concepto && g('mp-conc') && !g('mp-conc').value){ g('mp-conc').value = d.concepto; }
+
+  checkDupProv();
+  previewVenc();
+
+  if(!puestos.length){
+    st.textContent = 'El PDF se leyo pero no reconoci los campos. Pulsa "Ver texto leido" y rellena a mano.';
+    st.style.color = 'var(--orange)';
+  }else{
+    st.textContent = 'Leido: ' + puestos.length + ' campo(s). Revisa antes de guardar.';
+    st.style.color = 'var(--green)';
+    if(det){
+      var filas = [];
+      filas.push('Proveedor: <b>' + escH(d.proveedor||'—') + '</b>');
+      filas.push('N&ordm; factura: <b>' + escH(d.num||'—') + '</b>');
+      filas.push('Fecha: <b>' + escH(d.fecha||'—') + '</b>');
+      filas.push('Base: <b>' + (isNaN(d.base)?'—':d.base.toFixed(2)+' EUR') + '</b>');
+      filas.push('Total detectado: <b>' + (isNaN(d.total)?'—':d.total.toFixed(2)+' EUR') + '</b>');
+      det.innerHTML = filas.join(' &middot; ')
+        + (d.aviso ? '<div style="color:var(--orange);margin-top:4px">&#9888; La base y el total no cuadran al 21%. Comprueba los importes.</div>' : '');
+      det.style.display = 'block';
+    }
+  }
+  input.value = '';
 }
 
 function generarQR(f){
