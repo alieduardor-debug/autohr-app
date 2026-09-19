@@ -411,7 +411,17 @@ textarea{resize:vertical;min-height:60px}
         <div class="autocomplete-list" id="ac-mat-list"></div>
       </div>
     </div>
-    <div class="fg" id="mf-base-wrap"><label class="fl" id="mf-base-lbl">Base Imponible (sin IVA)</label><input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF();checkDupFact()"></div>
+    <div id="mf-conv-aviso" style="display:none;background:#faf5ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:#5b21b6;line-height:1.6"></div>
+    <div class="fg" id="mf-base-wrap">
+      <label class="fl" id="mf-base-lbl">Base Imponible (sin IVA)</label>
+      <input type="number" id="mf-base" step="0.01" min="0" placeholder="0.00" oninput="calcF();checkDupFact()">
+      <input type="hidden" id="mf-base-real">
+      <label id="mf-inc-iva-wrap" style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--t2);cursor:pointer">
+        <input type="checkbox" id="mf-inc-iva" onchange="toggleIncIVA()" style="width:17px;height:17px;flex-shrink:0;accent-color:var(--blue)">
+        <span>El importe ya lleva el IVA dentro (es lo cobrado)</span>
+      </label>
+      <div id="mf-desglose" style="display:none;font-size:11px;color:var(--t3);margin-top:6px;line-height:1.6"></div>
+    </div>
     <div class="g2" id="mf-iva-wrap">
       <div class="fg"><label class="fl">IVA 21%</label><input type="number" id="mf-iva" step="0.01" readonly placeholder="Auto"></div>
       <div class="fg"><label class="fl">Total con IVA</label><input type="number" id="mf-tot" step="0.01" readonly placeholder="Auto"></div>
@@ -1835,6 +1845,10 @@ async function guardarNumNext(){
   }
 }
 
+// Guarda como estaba el registro antes de editarlo, para saber si
+// se esta convirtiendo un albaran en factura.
+var _factOrig = null;
+
 function setTipoFact(tipo){
   g('mf-tipo').value=tipo;
   var btnF=g('tipo-factura-btn');var btnA=g('tipo-albaran-btn');var info=g('tipo-info');
@@ -1847,13 +1861,40 @@ function setTipoFact(tipo){
     if(baseLbl)baseLbl.textContent='Base Imponible (sin IVA)';
     if(numHint)numHint.style.display='';
     if(saveBtn)saveBtn.textContent='Guardar Factura';
-    // Generar número automático solo para facturas
+    var incWrap=g('mf-inc-iva-wrap'); if(incWrap) incWrap.style.display='flex';
+    var aviso=g('mf-conv-aviso');
+
+    // Numero automatico: al crear, y tambien al convertir un albaran
+    // (que no tenia numero). Nunca se pisa un numero ya existente.
     var eid=g('mf-id').value;
-    if(!eid){
+    var sinNumero=!numInput||!(numInput.value||'').trim();
+    if(!eid || sinNumero){
       var fechaEl=g('mf-fecha');
       if(numInput) numInput.value=generarNumFact(fechaEl?fechaEl.value:null);
     }
-    calcF();
+
+    // Conversion albaran -> factura
+    var convirtiendo = !!(eid && _factOrig && _factOrig.tipo==='albaran');
+    if(convirtiendo){
+      // El importe del albaran es lo que se cobro de verdad (lo que esta
+      // en el banco), asi que lleva el IVA dentro: hay que sacarlo, no sumarlo.
+      var chk=g('mf-inc-iva'); if(chk) chk.checked=true;
+      var lblB=g('mf-base-lbl'); if(lblB) lblB.textContent='Importe cobrado (IVA incluido)';
+      if(g('mf-base') && !g('mf-base').value) g('mf-base').value=(_factOrig.base||0).toFixed(2);
+      calcF();
+      var rr=repartirIVA(parseFloat(g('mf-base').value)||0, true);
+      if(aviso){
+        aviso.innerHTML='<b>Albaran convertido a factura.</b><br>'
+          +'Numero asignado: <b>'+escH(numInput?numInput.value:'')+'</b><br>'
+          +'Importe cobrado <b>'+eur(rr.total)+'</b> (lo del banco) = base <b>'+eur(rr.base)+'</b> + IVA <b>'+eur(rr.iva)+'</b>.<br>'
+          +'Si en su dia cobraste ese importe SIN IVA, desmarca la casilla de abajo.';
+        aviso.style.display='block';
+      }
+      if(numHint) numHint.textContent='(nuevo: '+String(getNextNumSeq()).padStart(3,'0')+')';
+    }else{
+      if(aviso) aviso.style.display='none';
+      calcF();
+    }
   }else{
     btnA.style.background='#7c3aed';btnA.style.borderColor='#7c3aed';btnA.style.color='#fff';
     btnF.style.background='var(--card)';btnF.style.borderColor='var(--border2)';btnF.style.color='var(--t2)';
@@ -1862,6 +1903,10 @@ function setTipoFact(tipo){
     if(baseLbl)baseLbl.textContent='Importe cobrado (sin IVA)';
     if(numHint)numHint.style.display='none';
     if(saveBtn)saveBtn.textContent='Guardar Albaran';
+    var incWrapA=g('mf-inc-iva-wrap'); if(incWrapA) incWrapA.style.display='none';
+    var chkA=g('mf-inc-iva'); if(chkA) chkA.checked=false;
+    var desA=g('mf-desglose'); if(desA) desA.style.display='none';
+    var avisoA=g('mf-conv-aviso'); if(avisoA) avisoA.style.display='none';
     // Limpiar número — albarán no tiene número de factura
     if(numInput){ numInput.value=''; numInput.placeholder='Sin numero (ref. interna opcional)'; }
     var ivaEl=g('mf-iva');if(ivaEl)ivaEl.value='0.00';
@@ -1952,14 +1997,69 @@ function checkDupProv(){
 // ============================================================
 // FACTURA CRUD
 // ============================================================
-function calcF(){var b=parseFloat(g('mf-base').value)||0;var tipo=g('mf-tipo')?g('mf-tipo').value:'factura';if(tipo==='albaran'){var ivaEl=g('mf-iva');if(ivaEl)ivaEl.value='0.00';var totEl=g('mf-tot');if(totEl)totEl.value=b.toFixed(2);}else{var iv=Math.round(b*21)/100;g('mf-iva').value=iv.toFixed(2);g('mf-tot').value=(b+iv).toFixed(2);}}
-function openFact(){g('mf-tit').textContent='Nueva Factura de Ingreso';g('mf-id').value='';acClose('ac-cli-list');acClose('ac-mat-list');var dw=g('mf-dup-warn');if(dw)dw.style.display='none';var sb=g('mf-save-btn');if(sb){sb.style.background='var(--blue)';sb.textContent='Guardar Factura';}var hoy=new Date().toISOString().slice(0,10);g('mf-fecha').value=hoy;setTimeout(function(){actualizarNumFact();var hint=g('mf-num-hint');if(hint){var seq=getNextNumSeq();hint.textContent='(secuencial: '+seq.toString().padStart(3,'0')+')'; }},50);g('mf-num').value='';g('mf-cli').value='';g('mf-mat').value='';g('mf-base').value='';g('mf-iva').value='';g('mf-tot').value='';g('mf-conc').value='';g('mf-pago').value='Transferencia';g('mf-est').value='Cobrado';g('mf-mes').value=curFT;var tipoEl=g('mf-tipo');if(tipoEl)tipoEl.value='factura';setTipoFact('factura');g('mf').classList.add('on');}
+// Reparte un importe entre base e IVA.
+//  - modo normal: lo tecleado es la BASE  -> IVA = base x 21%
+//  - modo "IVA dentro": lo tecleado es el TOTAL cobrado -> se saca la
+//    base dividiendo entre 1,21 y el IVA es la diferencia exacta, para
+//    que el total cuadre al centimo con lo que hay en el banco.
+function repartirIVA(importe, llevaIVA){
+  var v = Math.round((Number(importe)||0)*100)/100;
+  if(llevaIVA){
+    var base = Math.round(v/1.21*100)/100;
+    return { base: base, iva: Math.round((v-base)*100)/100, total: v };
+  }
+  var iva = Math.round(v*21)/100;
+  return { base: v, iva: iva, total: Math.round((v+iva)*100)/100 };
+}
+
+function calcF(){
+  var v    = parseFloat(g('mf-base').value)||0;
+  var tipo = g('mf-tipo') ? g('mf-tipo').value : 'factura';
+  var hid  = g('mf-base-real');
+  var des  = g('mf-desglose');
+
+  if(tipo === 'albaran'){
+    if(g('mf-iva')) g('mf-iva').value = '0.00';
+    if(g('mf-tot')) g('mf-tot').value = v.toFixed(2);
+    if(hid) hid.value = v.toFixed(2);
+    if(des) des.style.display = 'none';
+    return;
+  }
+
+  var inc = !!(g('mf-inc-iva') && g('mf-inc-iva').checked);
+  var r   = repartirIVA(v, inc);
+  g('mf-iva').value = r.iva.toFixed(2);
+  g('mf-tot').value = r.total.toFixed(2);
+  if(hid) hid.value = r.base.toFixed(2);
+
+  if(des){
+    if(inc && v > 0){
+      des.innerHTML = 'Cobrado <b>'+eur(r.total)+'</b> = base <b>'+eur(r.base)+'</b> + IVA <b>'+eur(r.iva)+'</b>. '
+        + 'El total no cambia: es lo que entro en el banco.';
+      des.style.display = 'block';
+    }else{
+      des.style.display = 'none';
+    }
+  }
+}
+
+function toggleIncIVA(){
+  var inc = !!(g('mf-inc-iva') && g('mf-inc-iva').checked);
+  var lbl = g('mf-base-lbl');
+  if(lbl) lbl.textContent = inc ? 'Importe cobrado (IVA incluido)' : 'Base Imponible (sin IVA)';
+  calcF();
+}
+function openFact(){_factOrig=null;var chkO=g('mf-inc-iva');if(chkO)chkO.checked=false;var lblO=g('mf-base-lbl');if(lblO)lblO.textContent='Base Imponible (sin IVA)';var avO=g('mf-conv-aviso');if(avO)avO.style.display='none';var deO=g('mf-desglose');if(deO)deO.style.display='none';g('mf-tit').textContent='Nueva Factura de Ingreso';g('mf-id').value='';acClose('ac-cli-list');acClose('ac-mat-list');var dw=g('mf-dup-warn');if(dw)dw.style.display='none';var sb=g('mf-save-btn');if(sb){sb.style.background='var(--blue)';sb.textContent='Guardar Factura';}var hoy=new Date().toISOString().slice(0,10);g('mf-fecha').value=hoy;setTimeout(function(){actualizarNumFact();var hint=g('mf-num-hint');if(hint){var seq=getNextNumSeq();hint.textContent='(secuencial: '+seq.toString().padStart(3,'0')+')'; }},50);g('mf-num').value='';g('mf-cli').value='';g('mf-mat').value='';g('mf-base').value='';g('mf-iva').value='';g('mf-tot').value='';g('mf-conc').value='';g('mf-pago').value='Transferencia';g('mf-est').value='Cobrado';g('mf-mes').value=curFT;var tipoEl=g('mf-tipo');if(tipoEl)tipoEl.value='factura';setTipoFact('factura');g('mf').classList.add('on');}
 function closeFact(){g('mf').classList.remove('on');acClose('ac-cli-list');acClose('ac-mat-list');}
-function editFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(!f)return;g('mf-tit').textContent='Editar Factura';g('mf-id').value=id;g('mf-mes').value=f.mes||curFT;g('mf-fecha').value=f.fecha||'';g('mf-num').value=f.num||'';g('mf-cli').value=f.cliente||'';g('mf-mat').value=f.matricula||'';g('mf-base').value=f.base||'';g('mf-iva').value=f.iva||'';g('mf-tot').value=f.total||'';g('mf-conc').value=f.concepto||'';g('mf-pago').value=f.pago||'Transferencia';g('mf-est').value=f.estado||'Cobrado';var tipoEdit=f.tipo||'factura';var tipoElE=g('mf-tipo');if(tipoElE)tipoElE.value=tipoEdit;setTipoFact(tipoEdit);g('mf').classList.add('on');var hintE=g('mf-num-hint');if(hintE)hintE.textContent='(editando)';setTimeout(checkDupFact,100);}
+function editFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(!f)return;_factOrig={tipo:f.tipo||'factura',base:Number(f.base||0),iva:Number(f.iva||0),total:Number(f.total||0),num:f.num||''};var chkE=g('mf-inc-iva');if(chkE)chkE.checked=false;var lblE=g('mf-base-lbl');if(lblE)lblE.textContent='Base Imponible (sin IVA)';var avE=g('mf-conv-aviso');if(avE)avE.style.display='none';g('mf-tit').textContent=(f.tipo==='albaran'?'Editar Albaran':'Editar Factura');g('mf-id').value=id;g('mf-mes').value=f.mes||curFT;g('mf-fecha').value=f.fecha||'';g('mf-num').value=f.num||'';g('mf-cli').value=f.cliente||'';g('mf-mat').value=f.matricula||'';g('mf-base').value=f.base||'';g('mf-iva').value=f.iva||'';g('mf-tot').value=f.total||'';g('mf-conc').value=f.concepto||'';g('mf-pago').value=f.pago||'Transferencia';g('mf-est').value=f.estado||'Cobrado';var tipoEdit=f.tipo||'factura';var tipoElE=g('mf-tipo');if(tipoElE)tipoElE.value=tipoEdit;setTipoFact(tipoEdit);g('mf').classList.add('on');var hintE=g('mf-num-hint');if(hintE)hintE.textContent='(editando)';setTimeout(checkDupFact,100);}
 async function saveFact(){
-  var base=parseFloat(g('mf-base').value)||0;if(!base){toast('Introduce la base imponible');return;}
+  var tecleado=parseFloat(g('mf-base').value)||0;
+  if(!tecleado){toast('Introduce el importe');return;}
   var tipo=(g('mf-tipo')?g('mf-tipo').value:'factura')||'factura';
-  var iva=tipo==='albaran'?0:Math.round(base*2100)/100/100;
+  var incIVA=!!(g('mf-inc-iva')&&g('mf-inc-iva').checked)&&tipo!=='albaran';
+  // Se guarda exactamente el reparto que el usuario esta viendo
+  var rep_=tipo==='albaran'?{base:tecleado,iva:0,total:tecleado}:repartirIVA(tecleado,incIVA);
+  var base=rep_.base, iva=rep_.iva, totalF=rep_.total;
   var eid=g('mf-id').value;var existente=eid?SD.facturas.find(function(x){return x.id===eid;}):null;
   // Para albarán: no asignar número de factura ni incrementar secuencia
   var numFinal='';
@@ -1968,8 +2068,15 @@ async function saveFact(){
   }else{
     numFinal=g('mf-num').value||''; // albarán: número opcional, vacío por defecto
   }
-  var obj={id:eid||uid(),mes:g('mf-mes').value,fecha:g('mf-fecha').value,num:numFinal,cliente:g('mf-cli').value,matricula:g('mf-mat').value,base:base,iva:iva,total:base+iva,tipo:tipo,concepto:g('mf-conc').value,pago:g('mf-pago').value,estado:g('mf-est').value,creadoPor:existente?(existente.creadoPor||USER):USER,creadoTs:existente?(existente.creadoTs||Date.now()):Date.now(),editadoPor:eid?USER:null,editadoTs:eid?Date.now():null};
-  if(eid){var i=SD.facturas.findIndex(function(x){return x.id===eid;});if(i>=0)SD.facturas[i]=obj;}
+  var obj={id:eid||uid(),mes:g('mf-mes').value,fecha:g('mf-fecha').value,num:numFinal,cliente:g('mf-cli').value,matricula:g('mf-mat').value,base:base,iva:iva,total:totalF,tipo:tipo,concepto:g('mf-conc').value,pago:g('mf-pago').value,estado:g('mf-est').value,creadoPor:existente?(existente.creadoPor||USER):USER,creadoTs:existente?(existente.creadoTs||Date.now()):Date.now(),editadoPor:eid?USER:null,editadoTs:eid?Date.now():null};
+  if(eid){
+    var i=SD.facturas.findIndex(function(x){return x.id===eid;});if(i>=0)SD.facturas[i]=obj;
+    // Si un albaran acaba de pasar a factura, reservar su secuencial
+    if(tipo==='factura'&&numFinal){
+      var seqEd=parseInt(numFinal.slice(-3),10);
+      if(!isNaN(seqEd)&&seqEd>=SD.numNext) SD.numNext=seqEd+1;
+    }
+  }
   else{
     SD.facturas.push(obj);
     // Solo incrementar numNext para facturas, NO para albaranes
