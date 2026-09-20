@@ -110,7 +110,7 @@ textarea{resize:vertical;min-height:60px}
   top:0;
   z-index:40;
   background:var(--bg);
-  padding:8px 0 6px;
+  padding:8px 0 8px;
   margin:-12px -14px 10px;
   padding-left:14px;
   padding-right:14px;
@@ -123,6 +123,28 @@ textarea{resize:vertical;min-height:60px}
   gap:7px;
   padding:5px 10px 8px;
 }
+/* ── Selector de mes y año tipo iPhone ── */
+.mpick{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.45);display:none;align-items:flex-end;justify-content:center;z-index:2600}
+.mpick.on{display:flex}
+.mpick-sheet{width:100%;max-width:480px;background:var(--card);border-radius:18px 18px 0 0;overflow:hidden;animation:mpUp .22s ease;padding-bottom:env(safe-area-inset-bottom,0px)}
+@keyframes mpUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mpick-top{display:flex;align-items:center;justify-content:space-between;padding:11px 10px;border-bottom:1px solid var(--border)}
+.mpick-btn{background:none;border:none;font-family:inherit;font-size:15px;color:var(--blue);padding:7px 10px;cursor:pointer;border-radius:8px}
+.mpick-btn.ok{font-weight:700}
+.mpick-tit{font-size:13px;font-weight:600;color:var(--t2)}
+.mpick-wheels{position:relative;display:flex;height:200px;overflow:hidden;padding:0 8px}
+.mpick-band{position:absolute;left:10px;right:10px;top:80px;height:40px;background:var(--bg);border-radius:10px;pointer-events:none;z-index:0}
+.mpick-col{flex:1;height:200px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:relative;z-index:1}
+.mpick-col::-webkit-scrollbar{display:none}
+.mpick-item{height:40px;line-height:40px;text-align:center;scroll-snap-align:center;font-size:17px;color:var(--t4);cursor:pointer;transition:color .15s}
+.mpick-item.sel{color:var(--t1);font-weight:700}
+.mpick-item.vacio{opacity:.35}
+.mpick-pad{height:80px}
+.mpick-info{font-size:11px;color:var(--t3);text-align:center;padding:9px 14px 13px}
+.mes-bar{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mes-bar:active{background:var(--bg)}
+.mes-bar-chev{margin-left:auto;color:var(--t4);font-size:13px;flex-shrink:0}
+
 /* Barra de mes situada entre el total y el listado */
 .mes-bar{
   display:flex;
@@ -225,34 +247,34 @@ textarea{resize:vertical;min-height:60px}
 
   <div class="sec" id="sec-facturas">
     <div class="sticky-tabs-wrap">
-      <div class="tabs" id="ft"></div>
-      <div style="display:flex;gap:8px;padding-top:6px">
+      <div style="display:flex;gap:8px">
         <div class="srch" style="flex:1"><span class="srch-ico">&#128269;</span><input type="text" id="fsrch" placeholder="Buscar cliente, matricula..." oninput="renderFacts()"></div>
         <button class="btn bp bsm" onclick="openFact()">+ Nueva</button>
       </div>
     </div>
     <div id="f-sum"></div>
-    <div class="mes-bar" id="f-mes-bar">
+    <div class="mes-bar" id="f-mes-bar" onclick="abrirMesPicker('facturas')" role="button" tabindex="0">
       <span style="font-size:16px">📅</span>
       <span class="mes-activo-txt" id="f-mes-badge">—</span>
       <span class="mes-activo-count" id="f-mes-count"></span>
+      <span class="mes-bar-chev">▾</span>
     </div>
     <div id="f-list"></div>
   </div>
 
   <div class="sec" id="sec-proveedores">
     <div class="sticky-tabs-wrap">
-      <div class="tabs" id="pt"></div>
-      <div style="display:flex;gap:8px;padding-top:6px">
+      <div style="display:flex;gap:8px">
         <div class="srch" style="flex:1"><span class="srch-ico">&#128269;</span><input type="text" id="psrch" placeholder="Buscar proveedor, factura..." oninput="renderProvs()"></div>
         <button class="btn bp bsm" onclick="openProv()">+ Nueva</button>
       </div>
     </div>
     <div id="p-sum"></div>
-    <div class="mes-bar" id="p-mes-bar">
+    <div class="mes-bar" id="p-mes-bar" onclick="abrirMesPicker('proveedores')" role="button" tabindex="0">
       <span style="font-size:16px">📅</span>
       <span class="mes-activo-txt" id="p-mes-badge">—</span>
       <span class="mes-activo-count" id="p-mes-count"></span>
+      <span class="mes-bar-chev">▾</span>
     </div>
     <div id="p-list"></div>
   </div>
@@ -280,15 +302,25 @@ textarea{resize:vertical;min-height:60px}
         <div class="lbl" style="margin:0">Gastos variables operativos</div>
         <button class="btn bp bsm" onclick="openGV()">+ Anadir</button>
       </div>
-      <div class="tabs" id="gvt"></div>
       <div id="gv-sum"></div>
+    <div class="mes-bar" id="gv-mes-bar" onclick="abrirMesPicker('gastos')" role="button" tabindex="0">
+      <span style="font-size:16px">📅</span>
+      <span class="mes-activo-txt" id="gv-mes-badge">—</span>
+      <span class="mes-activo-count" id="gv-mes-count"></span>
+      <span class="mes-bar-chev">▾</span>
+    </div>
       <div id="gv-list"></div>
     </div>
   </div>
 
   <div class="sec" id="sec-tesoreria">
     <div class="lbl">Vision por mes</div>
-    <div class="tabs" id="tes-tabs" style="margin-bottom:12px"></div>
+    <div class="mes-bar" id="tes-mes-bar" onclick="abrirMesPicker('tesoreria')" role="button" tabindex="0">
+      <span style="font-size:16px">📅</span>
+      <span class="mes-activo-txt" id="tes-mes-badge">—</span>
+      <span class="mes-activo-count" id="tes-mes-count"></span>
+      <span class="mes-bar-chev">▾</span>
+    </div>
     <div id="tes-body"></div>
   </div>
 
@@ -517,6 +549,22 @@ textarea{resize:vertical;min-height:60px}
 </div>
 
 <!-- MODAL PRINT/VIEW -->
+<div class="mpick" id="mpick" onclick="cerrarMesPickerFuera(event)">
+  <div class="mpick-sheet">
+    <div class="mpick-top">
+      <button class="mpick-btn" onclick="cerrarMesPicker()">Cancelar</button>
+      <div class="mpick-tit" id="mpick-tit">Seleccionar mes</div>
+      <button class="mpick-btn ok" onclick="aplicarMesPicker()">Aceptar</button>
+    </div>
+    <div class="mpick-wheels">
+      <div class="mpick-band"></div>
+      <div class="mpick-col" id="mpick-mes"></div>
+      <div class="mpick-col" id="mpick-anio"></div>
+    </div>
+    <div class="mpick-info" id="mpick-info"></div>
+  </div>
+</div>
+
 <div class="pmwrap" id="pmw" onclick="closePMOutside(event)">
   <div class="pmbox" id="pmbox">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px" class="no-print">
@@ -524,9 +572,13 @@ textarea{resize:vertical;min-height:60px}
       <button onclick="closePM()" style="background:var(--bg);border:1.5px solid var(--border2);border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;color:var(--t2)">✕</button>
     </div>
     <div id="pm-body"></div>
+    <div id="pm-guardar" class="no-print" style="display:none;margin-top:12px">
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:8px">PDF generado. Tu movil pide un toque mas para guardarlo.</div>
+      <button class="btn bp" style="width:100%" onclick="guardarPDFListo()">&#128190; Guardar PDF</button>
+    </div>
     <div style="display:flex;gap:8px;margin-top:14px" class="no-print">
       <button class="btn bs" style="flex:1" onclick="doPrint()">🖨️ Imprimir</button>
-      <button class="btn bp" style="flex:1" onclick="doPDF()">⬇️ Descargar PDF</button>
+      <button class="btn bp" style="flex:1" onclick="doPDF()">&#11015;&#65039; Descargar PDF</button>
       <button class="btn" style="flex:1" onclick="closePM()">← Volver</button>
     </div>
   </div>
@@ -927,17 +979,197 @@ function initTabs(){
   ['curFT','curPT','curGVT','curTET'].forEach(function(v){
     if(!window[v] || MESES_I.indexOf(window[v]) < 0) window[v] = pordefecto;
   });
-  var ftEl=g('ft');ftEl.innerHTML='';
-  MESES_I.forEach(function(m){var b=document.createElement('button');b.className='tab'+(m===curFT?' on':'');b.textContent=m;b.onclick=function(){setFT(m);};ftEl.appendChild(b);});
-  var ptEl=g('pt');ptEl.innerHTML='';
-  MESES_C.forEach(function(m){var b=document.createElement('button');b.className='tab'+(m===curPT?' on':'');b.textContent=m;b.onclick=function(){setPT(m);};ptEl.appendChild(b);});
-  var gvtEl=g('gvt');gvtEl.innerHTML='';
-  MESES_I.forEach(function(m){var b=document.createElement('button');b.className='tab'+(m===curGVT?' on':'');b.textContent=m;b.onclick=function(){setGVT(m);};gvtEl.appendChild(b);});
-  var tetEl=g('tes-tabs');
-  if(tetEl){tetEl.innerHTML='';MESES_I.forEach(function(m){var b=document.createElement('button');b.className='tab'+(m===curTET?' on':'');b.textContent=m;b.onclick=function(){curTET=m;initTabs();renderTesoreria();};tetEl.appendChild(b);});}
+  // Las filas de pestañas de meses se han sustituido por el selector
+  // de rueda: aqui solo se refrescan las barras de mes.
+  actualizarBarrasMes();
   var meses_all=MESES_I;
   ['mf-mes','mp-mes','gv-mes'].forEach(function(id){var s=g(id);if(!s)return;var arr=(id==='mp-mes')?MESES_C:meses_all;s.innerHTML=arr.map(function(m){return'<option value="'+m+'">'+(ML[m]||m)+'</option>';}).join('');});
 }
+// ============================================================
+// SELECTOR DE MES Y AÑO TIPO IPHONE
+// Dos ruedas que giran con el dedo y se enganchan al centro.
+// Solo deja elegir meses que existen en el calendario de la app.
+// ============================================================
+// Cada pantalla que se mueve por meses: de donde lee el mes,
+// como lo cambia y que cuenta en la barra.
+var MP_DEST = {
+  facturas: {
+    tit:'Mes de facturas', barra:'f',
+    get:function(){ return curFT; },
+    set:function(m){ setFT(m); },
+    cuenta:function(k){ return SD.facturas.filter(function(x){ return x.mes===k; }).length; },
+    nombre:function(n){ return n===1?'factura':'facturas'; }
+  },
+  proveedores: {
+    tit:'Mes de compras', barra:'p',
+    get:function(){ return curPT; },
+    set:function(m){ setPT(m); },
+    cuenta:function(k){ return SD.proveedores.filter(function(x){ return x.mes===k; }).length; },
+    nombre:function(n){ return n===1?'compra':'compras'; }
+  },
+  gastos: {
+    tit:'Mes de gastos', barra:'gv',
+    get:function(){ return curGVT; },
+    set:function(m){ setGVT(m); },
+    cuenta:function(k){ return SD.gastosVariables.filter(function(x){ return x.mes===k; }).length; },
+    nombre:function(n){ return n===1?'gasto':'gastos'; }
+  },
+  tesoreria: {
+    tit:'Mes de tesoreria', barra:'tes',
+    get:function(){ return curTET; },
+    set:function(m){ curTET=m; actualizarBarrasMes(); renderTesoreria(); },
+    cuenta:function(k){ return SD.facturas.filter(function(x){ return x.mes===k; }).length; },
+    nombre:function(n){ return n===1?'factura':'facturas'; }
+  }
+};
+
+// Refresca el texto de las barras que no pinta su propio render
+function actualizarBarrasMes(){
+  ['gastos','tesoreria'].forEach(function(d){
+    var cfg = MP_DEST[d];
+    var b = g(cfg.barra+'-mes-badge'), c = g(cfg.barra+'-mes-count');
+    if(!b) return;
+    var k = cfg.get();
+    b.textContent = ML[k] || k || '—';
+    if(c){ var n = cfg.cuenta(k); c.textContent = n + ' ' + cfg.nombre(n); }
+  });
+}
+
+var MP_ALTO = 40;                 // alto de cada linea, igual que en el CSS
+var _mpDestino = null;
+var _mpAnios = [];
+var _mpSelA = 0, _mpSelM = 0;
+var _mpMoviendo = false;
+
+function mesesDelAnio(a){
+  var r = [];
+  MESES_I.forEach(function(m){
+    var d = descomponerMes(m);
+    if(d && d.anio === a) r.push(d.mes);
+  });
+  return r;
+}
+
+function abrirMesPicker(destino){
+  if(!MESES_I.length) return;
+  if(!MP_DEST[destino]) return;
+  _mpDestino = destino;
+  var actual = MP_DEST[destino].get();
+  var d = descomponerMes(actual) || descomponerMes(MESES_I[MESES_I.length-1]);
+  _mpAnios = [];
+  MESES_I.forEach(function(m){
+    var dd = descomponerMes(m);
+    if(dd && _mpAnios.indexOf(dd.anio) < 0) _mpAnios.push(dd.anio);
+  });
+  _mpAnios.sort(function(x,y){ return x-y; });
+  _mpSelA = d.anio; _mpSelM = d.mes;
+
+  var t = g('mpick-tit');
+  if(t) t.textContent = MP_DEST[destino].tit;
+
+  pintarRuedaAnios();
+  pintarRuedaMeses();
+  g('mpick').classList.add('on');
+  // Colocar las ruedas una vez la hoja ya es visible
+  setTimeout(function(){
+    centrarRueda('mpick-mes',  mesesDelAnio(_mpSelA).indexOf(_mpSelM), false);
+    centrarRueda('mpick-anio', _mpAnios.indexOf(_mpSelA), false);
+    actualizarInfoPicker();
+  }, 60);
+}
+
+function cerrarMesPicker(){ g('mpick').classList.remove('on'); }
+function cerrarMesPickerFuera(e){ if(e.target === g('mpick')) cerrarMesPicker(); }
+
+function filaRueda(texto, sel, extra){
+  return '<div class="mpick-item'+(sel?' sel':'')+(extra||'')+'">'+texto+'</div>';
+}
+
+function pintarRuedaAnios(){
+  var col = g('mpick-anio'); if(!col) return;
+  col.innerHTML = '<div class="mpick-pad"></div>'
+    + _mpAnios.map(function(a){ return filaRueda(a, a === _mpSelA, ''); }).join('')
+    + '<div class="mpick-pad"></div>';
+  enganchar(col, 'anio');
+}
+
+function pintarRuedaMeses(){
+  var col = g('mpick-mes'); if(!col) return;
+  var disp = mesesDelAnio(_mpSelA);
+  if(disp.indexOf(_mpSelM) < 0) _mpSelM = disp.length ? disp[0] : 0;
+  col.innerHTML = '<div class="mpick-pad"></div>'
+    + disp.map(function(m){ return filaRueda(MES_LARGO[m], m === _mpSelM, ''); }).join('')
+    + '<div class="mpick-pad"></div>';
+  enganchar(col, 'mes');
+}
+
+function centrarRueda(id, idx, suave){
+  var col = g(id); if(!col || idx < 0) return;
+  _mpMoviendo = true;
+  try{ col.scrollTo({ top: idx*MP_ALTO, behavior: suave ? 'smooth' : 'auto' }); }
+  catch(e){ col.scrollTop = idx*MP_ALTO; }
+  setTimeout(function(){ _mpMoviendo = false; }, suave ? 320 : 60);
+}
+
+function enganchar(col, cual){
+  var t = null;
+  col.onscroll = function(){
+    if(_mpMoviendo) return;
+    clearTimeout(t);
+    t = setTimeout(function(){ asentarRueda(col, cual); }, 110);
+    marcarSeleccionVisual(col);
+  };
+  // Tocar una linea la selecciona directamente
+  col.onclick = function(ev){
+    var it = ev.target.closest ? ev.target.closest('.mpick-item') : null;
+    if(!it) return;
+    var items = [].slice.call(col.querySelectorAll('.mpick-item'));
+    var i = items.indexOf(it);
+    if(i >= 0){ centrarRueda(col.id, i, true); setTimeout(function(){ asentarRueda(col, cual); }, 360); }
+  };
+}
+
+function marcarSeleccionVisual(col){
+  var i = Math.round(col.scrollTop / MP_ALTO);
+  var items = col.querySelectorAll('.mpick-item');
+  for(var k=0; k<items.length; k++) items[k].classList.toggle('sel', k === i);
+}
+
+function asentarRueda(col, cual){
+  var i = Math.round(col.scrollTop / MP_ALTO);
+  if(cual === 'anio'){
+    if(i < 0) i = 0; if(i >= _mpAnios.length) i = _mpAnios.length-1;
+    var nuevo = _mpAnios[i];
+    if(nuevo !== _mpSelA){
+      _mpSelA = nuevo;
+      pintarRuedaMeses();                       // el año manda: se repintan sus meses
+      setTimeout(function(){ centrarRueda('mpick-mes', mesesDelAnio(_mpSelA).indexOf(_mpSelM), false); }, 20);
+    }
+  }else{
+    var disp = mesesDelAnio(_mpSelA);
+    if(i < 0) i = 0; if(i >= disp.length) i = disp.length-1;
+    _mpSelM = disp[i];
+  }
+  centrarRueda(col.id, i, false);
+  marcarSeleccionVisual(col);
+  actualizarInfoPicker();
+}
+
+function actualizarInfoPicker(){
+  var inf = g('mpick-info'); if(!inf) return;
+  var clave = claveMes(_mpSelA, _mpSelM);
+  var cfg = MP_DEST[_mpDestino] || MP_DEST.facturas;
+  var n = cfg.cuenta(clave);
+  inf.textContent = (ML[clave]||clave) + ' · ' + n + ' ' + cfg.nombre(n);
+}
+
+function aplicarMesPicker(){
+  var clave = claveMes(_mpSelA, _mpSelM);
+  if(MESES_I.indexOf(clave) < 0){ toast('Ese mes no esta en el calendario'); return; }
+  cerrarMesPicker();
+  (MP_DEST[_mpDestino] || MP_DEST.facturas).set(clave);
+}
+
 function setFT(m){curFT=m;g('fsrch').value='';initTabs();renderFacts();}
 function setPT(m){curPT=m;g('psrch').value='';initTabs();renderProvs();}
 function setGVT(m){curGVT=m;initTabs();renderGastos();}
@@ -1119,6 +1351,7 @@ function renderGastos(){
   }).join('');
   var gvL=SD.gastosVariables.filter(function(x){return x.mes===curGVT;});
   var gvTot=gvL.reduce(function(a,x){return a+Number(x.importe||0);},0);
+  actualizarBarrasMes();
   g('gv-sum').innerHTML='<div class="card" style="padding:10px 13px;margin-bottom:8px"><div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--t3)">Total gastos variables</span><span style="font-weight:700;color:var(--orange)">'+eur(gvTot)+'</span></div></div>';
   if(!gvL.length){g('gv-list').innerHTML='<div style="text-align:center;color:var(--t4);padding:20px;font-size:13px">Sin gastos en '+(ML[curGVT]||curGVT)+'</div>';return;}
   g('gv-list').innerHTML=gvL.map(function(gv){
@@ -1189,7 +1422,8 @@ function diaVencimiento(p){var prov=(p.proveedor||'').toLowerCase();return prov.
 function mkFilaTesoreria(lbl,val,color,negrita){var fw=negrita?'700':'400';return'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--t2);font-weight:'+fw+'">'+escH(lbl)+'</span><span style="font-size:13px;font-weight:'+fw+';color:'+color+'">'+val+'</span></div>';}
 
 function renderTesoreria(){
-  var tet=g('tes-tabs');if(!tet)return;
+  if(!g('tes-body')) return;
+  actualizarBarrasMes();
   var m=curTET;var idx=MESES_I.indexOf(m);var mSig=idx<MESES_I.length-1?MESES_I[idx+1]:null;
   var facs=SD.facturas.filter(function(f){return f.mes===m;});
   var ingTotal=facs.reduce(function(a,f){return a+Number(f.base||0);},0);
@@ -2144,9 +2378,9 @@ function buildInvHTML(f){
   return'<div class="inv"><div class="inv-hdr"><div><div style="font-size:15px;font-weight:800;color:#0f172a">'+escH(nomEmp)+'</div><div style="font-size:10px;color:#64748b;margin-top:1px">'+escH(reg)+'</div><div style="font-size:10px;color:#64748b">NIF: '+escH(nif)+'</div><div style="font-size:10px;color:#64748b">'+escH(dir)+'</div>'+(tel?'<div style="font-size:10px;color:#64748b">Tel: '+escH(tel)+'</div>':'')+(email?'<div style="font-size:10px;color:#64748b">'+escH(email)+'</div>':'')+'</div><div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+(esAlb?'#7c3aed':'#2563eb')+'">'+(esAlb?'ALBARAN DE TRABAJO':'FACTURA')+'</div>'+(f.num?'<div style="font-size:12px;font-weight:600">Num: '+f.num+'</div>':(esAlb?'<div style="font-size:11px;color:#7c3aed">Registro interno</div>':'<div style="font-size:12px;font-weight:600">S/N</div>'))+'<div style="font-size:11px;color:#64748b">Fecha: '+(f.fecha||'')+'</div></div></div><div style="margin-bottom:10px"><div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:3px;text-transform:uppercase">Cliente</div><div style="font-size:13px;font-weight:600">'+escH(f.cliente||'--')+'</div>'+(f.matricula?'<div style="font-size:11px;color:#64748b">Vehiculo: '+escH(f.matricula)+'</div>':'')+'</div><table class="inv-tbl"><thead><tr><th>Concepto / Trabajo</th><th style="text-align:right">Importe</th></tr></thead><tbody><tr><td>'+escH(f.concepto||'Servicio de taller mecanico')+'</td><td style="text-align:right">'+eur(f.base)+'</td></tr></tbody></table><div style="text-align:right;margin-top:8px;font-size:12px"><div>Base imponible: '+eur(f.base)+'</div>'+(esAlb?'':'<div>IVA (21%): '+eur(f.iva)+'</div>')+'<div style="font-size:16px;font-weight:800;border-top:2px solid #0f172a;margin-top:6px;padding-top:6px;color:#0f172a">TOTAL: '+eur(f.total)+'</div></div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:5px;text-transform:uppercase">Datos de pago</div><div style="font-size:11px;color:#334155"><b>'+escH(banco)+'</b> - '+escH(titular)+'</div><div style="font-size:13px;font-weight:700;color:#0f172a;font-family:monospace;letter-spacing:1px;margin-top:3px">'+escH(iban)+'</div><div style="font-size:11px;color:#64748b;margin-top:6px">Forma de pago: '+escH(f.pago||'--')+' &nbsp;|&nbsp; Estado: <b>'+(f.estado==='Cobrado'?'COBRADO':'PENDIENTE DE COBRO')+'</b></div></div><div id="qr-box-'+f.id+'" style="margin-left:10px;flex-shrink:0"></div></div></div>';
 }
 function buildProvHTML(p){var pr2=SD.perfil||{};var nomEmp2=pr2.nombre||'Ali Eduardo Rebolledo Lozada';var dir2=pr2.direccion||'Calle Sant Isidre 85, Gava (Barcelona)';return'<div class="inv"><div class="inv-hdr"><div><div style="font-size:14px;font-weight:800">'+escH(nomEmp2)+'</div><div style="font-size:10px;color:#64748b">'+escH(dir2)+'</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--orange)">COMPRA</div><div style="font-size:12px;font-weight:600">'+(p.num||'S/N')+'</div><div style="font-size:11px;color:#64748b">'+(p.fecha||'')+'</div></div></div><div style="margin-bottom:10px"><div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:3px">PROVEEDOR</div><div style="font-size:13px;font-weight:600">'+escH(p.proveedor||'--')+'</div></div>'+(p.concepto?'<div style="font-size:12px;margin-bottom:10px;color:#334155">'+escH(p.concepto)+'</div>':'')+'<table class="inv-tbl"><thead><tr><th>Descripcion</th><th style="text-align:right">Base</th><th style="text-align:right">IVA</th><th style="text-align:right">Total</th></tr></thead><tbody><tr><td>'+escH(p.concepto||'Compra de materiales')+'</td><td style="text-align:right">'+eur(p.base)+'</td><td style="text-align:right">'+eur(p.iva)+'</td><td style="text-align:right">'+eur(p.total)+'</td></tr></tbody></table><div class="inv-tot"><div style="font-size:12px;text-align:right"><div>Base imponible: '+eur(p.base)+'</div><div>IVA (21%): '+eur(p.iva)+'</div><div style="font-size:15px;border-top:1px solid #0f172a;margin-top:5px;padding-top:5px">TOTAL: '+eur(p.total)+'</div></div></div><div style="margin-top:12px;font-size:11px;color:#64748b">Estado: '+(p.estado==='Pagado'?'Pagado':'Pendiente')+'</div></div>';}
-function viewFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(!f)return;g('pm-tit').textContent='Factura - '+f.cliente;g('pm-body').innerHTML=buildInvHTML(f);g('pmw').classList.add('on');}
+function viewFact(id){var f=SD.facturas.find(function(x){return x.id===id;});if(!f)return;g('pm-tit').textContent='Factura - '+f.cliente;g('pm-body').innerHTML=buildInvHTML(f);ocultarBotonGuardar();_pdfListo=null;g('pmw').classList.add('on');precargarLibsPDF();}
 function printFact(id){viewFact(id);}
-function viewProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('pm-tit').textContent='Compra - '+p.proveedor;g('pm-body').innerHTML=buildProvHTML(p);g('pmw').classList.add('on');}
+function viewProv(id){var p=SD.proveedores.find(function(x){return x.id===id;});if(!p)return;g('pm-tit').textContent='Compra - '+p.proveedor;g('pm-body').innerHTML=buildProvHTML(p);ocultarBotonGuardar();_pdfListo=null;g('pmw').classList.add('on');precargarLibsPDF();}
 function printProv(id){viewProv(id);}
 function closePM(){
   var pmw=g('pmw');
@@ -2192,76 +2426,178 @@ function getNombrePDF(){
   return 'AutoHR_'+tit+'_'+fecha+'.pdf';
 }
 
-async function doPDF(){
-  var content=g('pm-body').innerHTML;
-  var css=getInvCSS();
-  var nombre=getNombrePDF();
+// ============================================================
+// DESCARGA DE PDF
+//
+// Antes esto solo abria el dialogo de impresion del sistema y
+// dependia de window.open, que el iPhone bloquea cuando la app
+// esta instalada en la pantalla de inicio. Por eso dejo de
+// descargar. Ahora se genera un PDF de verdad en el movil y se
+// entrega como archivo; la impresion queda solo como ultimo recurso.
+// ============================================================
 
-  // Método 1: en iOS Safari (PWA) usar ventana de impresión → "Guardar como PDF"
-  // Método 2: en Android/Chrome usar la API de impresión con destino PDF
-  // Método 3: si existe la API de compartir (iOS), ofrecer compartir directamente
+var LIBS_PDF = {
+  jspdf: [
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
+  ],
+  h2c: [
+    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+    'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+  ]
+};
 
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+nombre+'</title><style>'+css+'@page{margin:15mm}</style></head><body>'+content+'</body></html>';
-
-  // Detectar iOS
-  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
-    (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-
-  if(isIOS){
-    // En iOS: abrir en nueva pestaña con instrucción clara
-    var blob=new Blob([html],{type:'text/html'});
-    var url=URL.createObjectURL(blob);
-    var w=window.open(url,'_blank');
-    if(w){
-      setTimeout(function(){
-        w.print();
-        // Limpiar URL del blob después de un rato
-        setTimeout(function(){URL.revokeObjectURL(url);},30000);
-      },500);
-      toast('En iOS: pulsa Compartir ⬆️ → "Guardar en Archivos" o "Imprimir" → PDF');
-    } else {
-      // Si el popup fue bloqueado, mostrar instrucción alternativa
-      toast('Activa las ventanas emergentes o usa el botón Imprimir');
+// Carga un script probando varias direcciones por si una falla
+function cargarScript(urls){
+  return new Promise(function(res, rej){
+    var i = 0;
+    function intentar(){
+      if(i >= urls.length){ rej(new Error('No se pudo cargar la libreria')); return; }
+      var s = document.createElement('script');
+      s.src = urls[i++];
+      s.onload  = function(){ res(); };
+      s.onerror = function(){ s.remove(); intentar(); };
+      document.head.appendChild(s);
     }
-    return;
+    intentar();
+  });
+}
+
+var _pdfLibsProm = null;
+function cargarLibsPDF(){
+  if(window.jspdf && window.html2canvas) return Promise.resolve();
+  if(_pdfLibsProm) return _pdfLibsProm;
+  _pdfLibsProm = Promise.all([
+    window.jspdf      ? Promise.resolve() : cargarScript(LIBS_PDF.jspdf),
+    window.html2canvas? Promise.resolve() : cargarScript(LIBS_PDF.h2c)
+  ]).catch(function(e){ _pdfLibsProm = null; throw e; });
+  return _pdfLibsProm;
+}
+
+// Se precargan en cuanto se abre una vista imprimible, para que al
+// pulsar "Descargar PDF" no haya espera y el movil no pierda el gesto.
+function precargarLibsPDF(){ cargarLibsPDF().catch(function(){}); }
+
+var _pdfListo = null;   // {blob, nombre} del ultimo PDF generado
+
+async function generarBlobPDF(){
+  await cargarLibsPDF();
+  var body = g('pm-body');
+  if(!body || !body.innerHTML.trim()) throw new Error('No hay nada que convertir');
+
+  // Se monta una copia fuera de pantalla con ancho de folio,
+  // para que el PDF salga igual en movil y en ordenador.
+  var cont = document.createElement('div');
+  cont.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#ffffff;padding:24px;box-sizing:border-box';
+  var st = document.createElement('style'); st.textContent = getInvCSS();
+  cont.appendChild(st);
+  var inner = document.createElement('div'); inner.innerHTML = body.innerHTML;
+  cont.appendChild(inner);
+  document.body.appendChild(cont);
+
+  var canvas;
+  try{
+    canvas = await window.html2canvas(cont, { scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false });
+  } finally {
+    if(cont.parentNode) cont.parentNode.removeChild(cont);
   }
 
-  // En Android/Chrome/Desktop: usar Blob + iframe oculto para imprimir como PDF
+  var JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if(!JsPDF) throw new Error('jsPDF no disponible');
+  var pdf = new JsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  var pw = pdf.internal.pageSize.getWidth();
+  var ph = pdf.internal.pageSize.getHeight();
+  var mg = 10;
+  var anchoMM = pw - mg*2;
+  var pxPorMM = canvas.width / anchoMM;
+  var altoUtilPX = Math.floor((ph - mg*2) * pxPorMM);
+
+  if(canvas.height <= altoUtilPX){
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.94), 'JPEG', mg, mg, anchoMM, canvas.height/pxPorMM);
+  }else{
+    var y = 0, primera = true, vueltas = 0;
+    while(y < canvas.height && vueltas++ < 40){
+      var trozo = Math.min(altoUtilPX, canvas.height - y);
+      var c2 = document.createElement('canvas');
+      c2.width = canvas.width; c2.height = trozo;
+      var ctx = c2.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c2.width, c2.height);
+      ctx.drawImage(canvas, 0, y, canvas.width, trozo, 0, 0, canvas.width, trozo);
+      if(!primera) pdf.addPage();
+      pdf.addImage(c2.toDataURL('image/jpeg', 0.94), 'JPEG', mg, mg, anchoMM, trozo/pxPorMM);
+      primera = false;
+      y += trozo;
+    }
+  }
+  return pdf.output('blob');
+}
+
+// Entrega el archivo: primero la hoja de compartir del movil
+// (en el iPhone da "Guardar en Archivos"), si no, descarga directa.
+async function entregarPDF(blob, nombre){
+  var file = null;
+  try{ file = new File([blob], nombre, { type:'application/pdf' }); }catch(e){}
+
+  if(file && navigator.canShare && navigator.share){
+    var puede = false;
+    try{ puede = navigator.canShare({ files:[file] }); }catch(e){}
+    if(puede){
+      try{
+        await navigator.share({ files:[file], title:nombre });
+        ocultarBotonGuardar();
+        return true;
+      }catch(e){
+        if(e && e.name === 'AbortError'){ ocultarBotonGuardar(); return true; }   // el usuario cancelo
+        // NotAllowedError: el movil pide un toque nuevo -> se ofrece boton
+      }
+    }
+  }
+
   try{
-    var blob2=new Blob([html],{type:'text/html'});
-    var url2=URL.createObjectURL(blob2);
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = nombre; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 8000);
+    ocultarBotonGuardar();
+    toast('PDF descargado: ' + nombre, 4000);
+    return true;
+  }catch(e){ return false; }
+}
 
-    // Crear iframe oculto
-    var iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none';
-    iframe.src=url2;
-    document.body.appendChild(iframe);
+// Si el movil exige un toque nuevo, aparece este boton dentro de la vista
+function mostrarBotonGuardar(){
+  var barra = g('pm-guardar');
+  if(!barra) return;
+  barra.style.display = 'block';
+}
+function ocultarBotonGuardar(){
+  var barra = g('pm-guardar');
+  if(barra) barra.style.display = 'none';
+}
+async function guardarPDFListo(){
+  if(!_pdfListo){ doPDF(); return; }
+  var ok = await entregarPDF(_pdfListo.blob, _pdfListo.nombre);
+  if(!ok) toast('No se pudo guardar. Prueba con Imprimir.', 4000);
+}
 
-    iframe.onload=function(){
-      setTimeout(function(){
-        try{
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-        }catch(e){
-          // Fallback: abrir en pestaña nueva
-          window.open(url2,'_blank');
-        }
-        setTimeout(function(){
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(url2);
-        },5000);
-      },300);
-    };
-
-    toast('Selecciona "Guardar como PDF" en el diálogo de impresión');
-
+async function doPDF(){
+  var nombre = getNombrePDF();
+  toast('Generando PDF...');
+  var blob;
+  try{
+    blob = await generarBlobPDF();
   }catch(e){
-    // Último fallback
-    var w2=window.open('','_blank');
-    w2.document.write(html);
-    w2.document.close();
-    setTimeout(function(){w2.print();},400);
-    toast('Usa "Guardar como PDF" en el diálogo de impresión');
+    console.log('PDF error:', e.message);
+    toast('No se pudo generar el PDF, abro la impresion', 4500);
+    doPrint();
+    return;
+  }
+  _pdfListo = { blob: blob, nombre: nombre };
+  var ok = await entregarPDF(blob, nombre);
+  if(!ok){
+    mostrarBotonGuardar();
+    toast('PDF listo. Pulsa "Guardar PDF" para descargarlo.', 6000);
   }
 }
 
